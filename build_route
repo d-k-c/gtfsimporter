@@ -1,0 +1,89 @@
+#! /usr/bin/env python
+
+import os
+import sys
+import csv
+
+from collections import defaultdict
+from operator import itemgetter
+
+
+DATADIR = "data"
+ROUTE_FILE = "routes.txt"
+TRIPS_FILE = "trips.txt"
+STOPS_FILE = "stops.txt"
+STOPTIME_FILE = "stop_times.txt"
+
+stops = os.path.join(DATADIR, STOPS_FILE)
+
+if len(sys.argv) != 2:
+    print("This script must be called with the route number you wish to generate.")
+    print("Example: {} 51".format(sys.argv[0]))
+    sys.exit(0)
+
+print("Looking for route '{}'".format(sys.argv[1]))
+route_id = None
+with open(os.path.join(DATADIR, ROUTE_FILE)) as routesfile:
+    routesreader = csv.DictReader(routesfile)
+    for row in routesreader:
+        if row["route_id"] == sys.argv[1]:
+            route_id = row["route_id"]
+            print("Found route '{}'".format(route_id))
+
+    if route_id is None:
+        print("Route not found. Exiting")
+        sys.exit(1)
+
+print("Collecting all trips for this route")
+trips = dict()
+with open(os.path.join(DATADIR, TRIPS_FILE)) as tripsfile:
+    tripsreader = csv.DictReader(tripsfile)
+    for row in tripsreader:
+        if row["route_id"] == route_id:
+            trips[row["trip_id"]] = list()
+    print("Found {} trips for route {}".format(len(trips), route_id))
+
+print("Collecting stop sequences from these trips")
+with open(os.path.join(DATADIR, STOPTIME_FILE)) as timefile:
+    # do not use a DictReader here for performance
+    timereader = csv.reader(timefile)
+    for row in timereader:
+        trip_id, stop_id, stop_sequence = row[0], row[3], row[4]
+        if trip_id in trips:
+            trips[trip_id].append((stop_id, int(stop_sequence)))
+
+print("Found {} trip sequences".format(len(trips)))
+
+print("Sorting stop sequences...")
+for sequence in trips.values():
+    sequence.sort(key=itemgetter(1))
+
+print("Deduplicate sequences...")
+dedup_trips = []
+for sequence in trips.values():
+    if sequence not in dedup_trips:
+        dedup_trips.append(sequence)
+print("Found a total of {} different trips".format(len(dedup_trips)))
+
+print("Collecting station informations")
+station_ids = set([s[0] for sequence in dedup_trips for s in sequence])
+station_names = dict()
+max_len = 0
+with open(os.path.join(DATADIR, STOPS_FILE)) as stopsfile:
+    stopsreader = csv.DictReader(stopsfile)
+    for row in stopsreader:
+        if row["stop_id"] in station_ids:
+            name = row["stop_name"]
+            station_names[row["stop_id"]] = (name, row["stop_lat"], row["stop_lon"], row["stop_code"])
+            if len(name) > max_len:
+                max_len = len(name)
+
+print("Unique trips:")
+for trip in dedup_trips:
+    count = list(trips.values()).count(trip)
+    print("Trip ({} occurences, {} stops)".format(count, len(trip)))
+    for stop in trip:
+        stop_id = stop[0]
+        name, lat, lon, code = station_names[stop_id]
+        print(f"{lat} {lon} * {code} * {name}")
+    print("")
