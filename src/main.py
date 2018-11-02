@@ -128,7 +128,10 @@ def parse_command_line():
     test_osm_parser.set_defaults(func=test_osm)
 
     args = parser.parse_args()
-    args.func(args)
+    if hasattr(args, "func"):
+        args.func(args)
+    else:
+        parser.print_help()
 
 parse_command_line()
 sys.exit(0)
