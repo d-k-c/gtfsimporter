@@ -150,9 +150,11 @@ class RouteRelation(Relation):
             stop_member = StopRelationMember(osm_stop.id)
             self.add_member(stop_member)
 
-        self.way = Way(self.trip.way)
-        way_member = WayRelationMember(self.way.id)
-        self.add_member(way_member)
+        self.way = None
+        if len(self.trip.way):
+            self.way = Way(self.trip.way)
+            way_member = WayRelationMember(self.way.id)
+            self.add_member(way_member)
 
         assert from_stop is not None
         assert to_stop is not None
@@ -160,7 +162,8 @@ class RouteRelation(Relation):
         self.add_tag("to", to_stop)
 
     def export(self, container):
-        self.way.export(container)
+        if self.way:
+            self.way.export(container)
         super().export(container)
 
 
