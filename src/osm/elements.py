@@ -22,6 +22,9 @@ class WayUnordered(object):
         for seq in sorted(self.nodes.keys()):
             yield self.nodes[seq]
 
+    def __len__(self):
+        return len(self.nodes)
+
 class StopTime(object):
 
     def __init__(self, stop, sequence):
