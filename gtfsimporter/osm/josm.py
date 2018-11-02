@@ -201,7 +201,7 @@ class JosmDocument(object):
     def __init__(self):
         self.container = ET.Element("osm")
         self.container.set("version", "0.6")
-        self.container.set("generator", "STM Importer")
+        self.container.set("generator", "GTFS Importer")
 
         self.tree = ET.ElementTree(self.container)
 
