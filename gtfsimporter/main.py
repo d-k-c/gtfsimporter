@@ -59,6 +59,43 @@ def export_route(args):
     doc.export_route(route, osm.stops)
     doc.write(args.dest)
 
+def export_stops(args):
+    if args.gtfs_datadir is None:
+        print("Directory with GTFS files must be specified")
+        return
+
+    gtfs = Schedule()
+    loader = GTFSImporter(args.gtfs_datadir)
+    loader.load_stops(gtfs)
+
+    if args.only_missing:
+        bbox = gtfs.get_bounding_box(1000)
+        loader = OsmImporter(bbox)
+        xml = None
+        if args.osm_cache:
+            xml = args.osm_cache.read()
+
+        osm = Schedule()
+        loader.load_stops(osm, xml)
+
+        osm_refs = []
+        for stop in osm.stops:
+            osm_refs.extend(stop.refs)
+
+        export_stops = []
+        for stop in gtfs.stops:
+            assert len(stop.refs) == 1
+            ref = stop.refs[0]
+
+            if ref not in osm_refs:
+                export_stops.append(stop)
+    else:
+        export_stops = gtfs.stops
+
+    doc = JosmDocument()
+    doc.export_stops(export_stops)
+    doc.write(args.dest)
+
 def inspect_stops(args):
     if args.gtfs_datadir is None:
         print("Directory with GTFS files must be specified")
@@ -116,6 +153,20 @@ def parse_command_line():
         metavar="route-id",
         help="identifier of the route in the GTFS routes.txt file")
     export_route_parser.set_defaults(func=export_route)
+
+    export_stops_parser = subparsers.add_parser(
+        "export-stops",
+        help="export all stops from GTFS in JOSM format")
+    export_stops_parser.add_argument(
+        "--only-missing",
+        action="store_true",
+        help="export only nodes missing in OSM")
+    export_stops_parser.add_argument(
+        "--dest",
+        type=argparse.FileType('w'),
+        default=sys.stdout,
+        help="Output file")
+    export_stops_parser.set_defaults(func=export_stops)
 
     inspect_stops_parser = subparsers.add_parser(
         "inspect-stops",
