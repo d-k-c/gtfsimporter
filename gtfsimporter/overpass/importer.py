@@ -125,6 +125,6 @@ class OsmImporter():
     def load(self, xml=None):
         schedule = Schedule()
         self.load_stops(schedule, xml)
-        self.load_routes(schedule, xml)
+        #self.load_routes(schedule, xml)
 
         return schedule
