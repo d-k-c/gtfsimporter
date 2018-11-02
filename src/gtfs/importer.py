@@ -106,7 +106,8 @@ class GTFSImporter():
                 schedule.add_shape_point(shape_id, lat, lon, seq)
 
 
-    def load(self, route_ids_of_interest=None, unique_trips=False):
+    def load(self, route_ids_of_interest=None, unique_trips=False,
+             shapes=False):
         schedule = Schedule()
         self.load_stops(schedule)
         self.load_routes(schedule, route_ids_of_interest)
@@ -116,6 +117,7 @@ class GTFSImporter():
         if unique_trips:
             schedule.remove_duplicated_trips()
 
-        #self.load_shapes(schedule)
+        if shapes:
+            self.load_shapes(schedule)
 
         return schedule

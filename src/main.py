@@ -11,13 +11,14 @@ from .overpass.importer import OsmImporter
 from .validator.validator import StopValidator
 from .validator.issue import IssueList
 
-def load_gtfs(datadir, route_ids, unique_trips=True):
+def load_gtfs(datadir, route_ids, unique_trips=True, shapes=False):
     if datadir is None:
         print("Directory with GTFS files must be specified")
         return
 
     loader = GTFSImporter(datadir)
-    schedule = loader.load(route_ids, unique_trips=unique_trips)
+    schedule = loader.load(route_ids, unique_trips=unique_trips,
+                           shapes=shapes)
     schedule.remove_truncated_trips()
 
     return schedule
@@ -43,7 +44,8 @@ def test_osm(args):
 
 def export_route(args):
     route_ids = (args.route_id, )
-    gtfs = load_gtfs(args.gtfs_datadir, route_ids)
+    gtfs = load_gtfs(args.gtfs_datadir, route_ids,
+                     shapes=args.with_shapes)
 
     # Get the bounding box. This is used only if an actual
     # query to Overpass is made
@@ -100,6 +102,10 @@ def parse_command_line():
     export_route_parser = subparsers.add_parser(
         "export-route",
         help="export compete route in JOSM format")
+    export_route_parser.add_argument(
+        "--with-shapes",
+        action="store_true",
+        help="export route shapes")
     export_route_parser.add_argument(
         "--dest",
         type=argparse.FileType('w'),
