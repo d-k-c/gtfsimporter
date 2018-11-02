@@ -70,7 +70,7 @@ class Way(OsmObject):
 
             nd = ET.SubElement(way, "nd")
             nd.set("ref", node.id)
-        self.export_tags(node)
+        self.export_tags(way)
 
 class RelationMember:
 
