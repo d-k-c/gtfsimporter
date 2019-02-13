@@ -140,7 +140,7 @@ class RouteRelation(Relation):
             assert len(stop.refs) == 1
             ref = stop.refs[0]
 
-            assert ref in stops
+            assert ref in stops, f"missing ref {ref}"
             osm_stop = stops[ref]
 
             to_stop = osm_stop.name
@@ -222,7 +222,11 @@ class JosmDocument(object):
         self.export_routes(routes, stop_list)
 
     def export_routes(self, routes, stop_list):
-        stops_by_ref = dict([(stop.refs[0], stop) for stop in stop_list])
+        stops_by_ref = dict()
+        for stop in stop_list:
+            for ref in stop.refs:
+                stops_by_ref[ref] = stop
+
         for route in routes:
             route_master = RouteMasterRelation(route, stops_by_ref)
             route_master.export(self.container)
