@@ -8,6 +8,7 @@ from ..osm.elements import Schedule
 
 class GTFSImporter():
 
+    _AGENCY_FILE = "agency.txt"
     _STOPS_FILE = "stops.txt"
     _ROUTES_FILE = "routes.txt"
     _TRIPS_FILE = "trips.txt"
@@ -16,7 +17,32 @@ class GTFSImporter():
 
     def __init__(self, path):
         self.path = path
-        self.agency = agencies[0]()
+
+        agency = self.find_agency()
+        self.agency = agency()
+
+
+    def find_agency(self):
+        """
+        Find agency class capable of handling the targeted GTFS dataset.
+
+        This function reads the first entry of agency.txt and will try to find
+        the corresponding agency class capable of handling this dataset. Agency
+        classes are listed in the `agencies` variable of gtfs/__init__.py.
+        """
+        path = os.path.join(self.path, self._AGENCY_FILE)
+        with open(path) as agencyfile:
+            agencyreader = csv.DictReader(agencyfile)
+            row = next(agencyreader)
+
+        agency_id = row["agency_id"]
+        agency_name = row["agency_name"]
+        for agency in agencies:
+            if agency.id == agency_id and agency.name == agency_name:
+                return agency
+        else:
+            raise NotImplementedError(f"Agency '{agency_name}' is not supported yet")
+
 
     def load_stops(self, schedule=None):
         if schedule is None:

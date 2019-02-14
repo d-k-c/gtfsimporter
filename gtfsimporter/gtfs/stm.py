@@ -6,8 +6,8 @@ from .exceptions import SkipEntryError
 
 class StmAgency(object):
 
-    agency_id = "STM"
-    agency_name = "Société de transport de Montréal"
+    id = "STM"
+    name = "Société de transport de Montréal"
 
     def make_stop(self, row):
         return StmStop(row)
