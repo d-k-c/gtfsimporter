@@ -4,6 +4,7 @@ import csv
 
 from ..osm.elements import Route, Schedule, Stop, StopTime, Trip
 
+from .stm import SkipEntryError, StmAgency
 
 class GTFSImporter():
 
@@ -15,6 +16,7 @@ class GTFSImporter():
 
     def __init__(self, path):
         self.path = path
+        self.agency = StmAgency()
 
     def load_stops(self, schedule=None):
         if schedule is None:
@@ -24,17 +26,11 @@ class GTFSImporter():
         with open(path) as stopsfile:
             stopsreader = csv.DictReader(stopsfile)
             for row in stopsreader:
-                if "metro" in row["stop_url"]:
+                try:
+                    stop = self.agency.make_stop(row)
+                    schedule.add_stop(stop)
+                except SkipEntryError:
                     continue
-
-                stop_id = row["stop_id"]
-                name = row["stop_name"]
-                ref = row["stop_code"]
-                lat = row["stop_lat"]
-                lon = row["stop_lon"]
-
-                stop = Stop(name, ref, lon, lat, stop_id, None, None, None)
-                schedule.add_stop(stop)
 
         return schedule
 
@@ -43,17 +39,15 @@ class GTFSImporter():
         with open(path) as routesfile:
             routesreader = csv.DictReader(routesfile)
             for row in routesreader:
-                if "metro" in row["route_url"]:
+                try:
+                    route = self.agency.make_route(row)
+                except SkipEntryError:
                     continue
 
-                route_id = row["route_id"]
-                route_code = row["route_short_name"]
-                route_name = row["route_long_name"]
-                agency = row["agency_id"]
-
-                if (routes_of_interest is not None and route_id in routes_of_interest) or \
+                # We keep only routes if we are specifically interested in them,
+                # or all the routes if no specific routes have been specified
+                if (routes_of_interest is not None and route.id in routes_of_interest) or \
                     routes_of_interest is None:
-                    route = Route(route_id, route_code, route_name, agency, agency)
                     schedule.add_route(route)
 
     def load_trips(self, schedule):
@@ -61,34 +55,37 @@ class GTFSImporter():
         with open(path) as tripsfile:
             tripsreader = csv.DictReader(tripsfile)
             for row in tripsreader:
-                trip_id = row["trip_id"]
-                route_id = row["route_id"]
-                headsign = row["trip_headsign"]
+                try:
+                    trip = self.agency.make_trip(row)
+                except SkipEntryError:
+                    continue
 
-                shape_id = row["shape_id"]
-
-                route = schedule.get_route(route_id, None)
+                # route will exist only if it was deemed of interest by load_routes
+                route = schedule.get_route(trip.route_id, None)
                 if route:
-                    network = route.network if route.network else None
-                    operator = route.operator if route.operator else None
-                    trip = Trip(trip_id, route, headsign, network, operator)
-                    schedule.add_trip(trip, shape_id)
+                    trip.add_route(route)
+                    route.add_trip(trip)
+                    schedule.add_trip(trip)
 
     def load_stop_times(self, schedule):
         path = os.path.join(self.path, self._STOP_TIMES_FILE)
 
         with open(path) as timefile:
-            timereader = csv.reader(timefile)
+            timereader = csv.DictReader(timefile)
             row = next(timereader)
 
             for row in timereader:
-                trip_id, stop_id, stop_sequence = row[0], row[3], row[4]
-                stop_sequence = int(stop_sequence)
+                try:
+                    stop_time = self.agency.make_stop_time(row)
+                except SkipEntryError:
+                    continue
 
-                trip = schedule.get_trip(trip_id, None)
+                # get_trip will return an entry only if this trip belongs to a route
+                # we are interested in in the first place
+                trip = schedule.get_trip(stop_time.trip_id, None)
                 if trip is not None:
-                    stop = schedule.get_stop(stop_id)
-                    stop_time = StopTime(stop, stop_sequence)
+                    stop = schedule.get_stop(stop_time.stop_id)
+                    stop_time.set_stop(stop)
 
                     schedule.add_stop_time(trip, stop_time)
 

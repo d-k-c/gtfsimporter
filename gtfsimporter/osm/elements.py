@@ -27,9 +27,17 @@ class WayUnordered(object):
 
 class StopTime(object):
 
-    def __init__(self, stop, sequence):
-        self.stop = stop
+#    def __init__(self, stop, sequence):
+#        self.stop = stop
+#        self.sequence = sequence
+#
+    def __init__(self, trip_id, stop_id, sequence):
+        self.trip_id = trip_id
+        self.stop_id = stop_id
         self.sequence = sequence
+
+    def set_stop(self, stop):
+        self.stop = stop
 
     def __eq__(self, other):
         return self.stop == other.stop and \
@@ -86,20 +94,25 @@ class Trip(object):
         }
     }
 
-    def __init__(self, trip_id, route, headsign, network=None, operator=None):
+    def __init__(self, trip_id, route_id, headsign, network=None, operator=None, shape_id=None):
         self.id = trip_id
-        self.route = route
+        self.route_id = route_id
         self.headsign = headsign
         self.stops = {}
         self.network = network
         self.operator = operator
+        self.shape_id = shape_id
         self.way = WayUnordered()
-
-        if self.route:
-            self.route.add_trip(self)
 
     def __len__(self):
         return len(self.stops)
+
+    def add_route(self, route):
+        self.route = route
+        if not self.network:
+            self.network = route.network
+        if not self.operator:
+            self.operator = route.operator
 
     def add_stop_time(self, stop_time):
         self.stops[stop_time.sequence] = stop_time
@@ -235,9 +248,9 @@ class Schedule(object):
     def add_stop(self, stop):
         self._stops_dict[stop.id] = stop
 
-    def add_trip(self, trip, shape_id=None):
+    def add_trip(self, trip):
         self._trips_dict[trip.id] = trip
-        self._shapes_dict[shape_id].append(trip.id)
+        self._shapes_dict[trip.shape_id].append(trip.id)
 
     def add_shape_point(self, shape_id, lat, lon, seq):
         for trip_id in self._shapes_dict[shape_id]:
