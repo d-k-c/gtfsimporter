@@ -79,21 +79,6 @@ class Stop(Node):
 
 class Trip(object):
 
-    directions = {
-        'fr': {
-            'N': "Nord",
-            'S': "Sud",
-            'E': "Est",
-            'O': "Ouest"
-        },
-        'en': {
-            'N': "North",
-            'S': "South",
-            'E': "East",
-            'O': "West"
-        }
-    }
-
     def __init__(self, trip_id, route_id, headsign, network=None, operator=None, shape_id=None):
         self.id = trip_id
         self.route_id = route_id
@@ -132,16 +117,6 @@ class Trip(object):
                 return False
         else:
             return True
-
-    def get_direction(self, lang='fr'):
-        if self.headsign[-2] == "-":
-            direction = self.headsign[-1]
-            return self.directions[lang][direction]
-
-    def get_name(self, lang='fr'):
-        return "{} {}".format(
-                self.route.get_name(lang),
-                self.get_direction(lang))
 
     def __repr__(self):
         return "<Trip id={}, name={}, {} stops>".format(self.id, self.headsign, len(self.stops))
@@ -200,12 +175,6 @@ class Route(object):
         self.trips = list(dups.values())
 
         return truncated_trip_ids
-
-    def get_name(self, lang='fr'):
-        if lang == 'fr':
-            return "Bus {} : {}".format(self.code, self.name)
-        elif lang == 'en':
-            return "Bus {}: {}".format(self.code, self.name)
 
 
 class Schedule(object):
