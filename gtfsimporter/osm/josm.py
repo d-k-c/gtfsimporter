@@ -222,14 +222,13 @@ class JosmDocument(object):
 
     def export_stops(self, stop_list):
         for stop in stop_list:
-            assert len(stop.refs) == 1
             assert stop.name
             node = Node(stop.lat, stop.lon)
             node.add_tag("bus", "yes")
             node.add_tag("highway", "bus_stop")
             node.add_tag("name", stop.name)
             node.add_tag("public_transport", "platform")
-            node.add_tag("ref", stop.refs[0])
+            node.add_tag("ref", ";".join(stop.refs))
             node.export(self.container)
 
     def export_route(self, route, stop_list):

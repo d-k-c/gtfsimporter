@@ -56,6 +56,9 @@ class Stop(Node):
         self.bus = bus
         self.public_transport = public_transport
 
+    def add_ref(self, ref):
+        self.refs.append(ref)
+
     @property
     def ref(self):
         assert len(self.refs) == 1
@@ -229,7 +232,7 @@ class Schedule(object):
         by.
         """
         for s in self.stops:
-            if s.name == stop.name and s.ref == stop.ref and \
+            if s.name == stop.name and \
                s.lat == stop.lat and s.lon == stop.lon:
                 return s
 
@@ -240,6 +243,9 @@ class Schedule(object):
 
         if existing_stop:
             self._stops_by_id[stop.id] = existing_stop
+            if stop.ref not in existing_stop.refs:
+                existing_stop.add_ref(stop.ref)
+                print(existing_stop.refs)
         else:
             self._stops.append(stop)
             self._stops_by_id[stop.id] = stop
