@@ -131,7 +131,14 @@ class RouteRelation(Relation):
         self.add_tag("public_transport:version", "2")
         self.add_tag("ref", trip.headsign)
         self.add_tag("name", trip.get_name())
-        self.add_tag("name:en", trip.get_name('en'))
+
+        # handle extra locales for multilingual agencies
+        if hasattr(trip, "extra_locales"):
+            for locale in trip.extra_locales:
+                tag_name = f'name:{locale}'
+                trip_name = trip.get_name(locale)
+                self.add_tag(tag_name, trip_name)
+
         self.add_tag("network", trip.network)
         self.add_tag("operator", trip.operator)
 
@@ -175,6 +182,14 @@ class RouteMasterRelation(Relation):
         self.stops = stops
 
         self.add_tag("name", route.get_name())
+
+        # handle extra locales for multilingual agencies
+        if hasattr(route, "extra_locales"):
+            for locale in route.extra_locales:
+                tag_name = f'name:{locale}'
+                route_name = route.get_name(locale)
+                self.add_tag(tag_name, route_name)
+
         self.add_tag("ref", route.code)
         self.add_tag("network", route.network)
         self.add_tag("operator", route.operator)

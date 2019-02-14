@@ -38,6 +38,8 @@ class StmStop(Stop):
 
 class StmRoute(Route):
 
+    extra_locales = ['en']
+
     def __init__(self, row):
         if "metro" in row["route_url"]:
             raise SkipEntryError("This stop is for a metro line")
@@ -59,6 +61,8 @@ class StmRoute(Route):
 
 
 class StmTrip(Trip):
+
+    extra_locales = ['en']
 
     directions = {
         'fr': {
