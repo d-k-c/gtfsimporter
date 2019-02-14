@@ -37,7 +37,7 @@ install the dependencies yourself:
 
 ## TL;DR
 
-- I want to see the route for line 10, what should I do?
-- `make`
+- I want to see the route for line 10 of the STM network, what should I do?
+- `make stm-extract`
 - `pipenv sync`
-- `pipenv run python -m gtfsimporter.main --gtfs-datadir data/ export-route --dest line_10.osm 10`
+- `pipenv run python -m gtfsimporter.main --gtfs-datadir work/stm/gtfs export-route --dest line_10.osm 10`

@@ -1,38 +1,46 @@
 
-STM_GTS_ZIPFILE := gtfs_stm.zip
-STM_REMOTE_FOLDER := http://stm.info/sites/default/files/gtfs
+OUTPUT := $(CURDIR)/work
 
-GTFS_FILES := agency.txt \
-	      calendar_dates.txt \
-	      fare_attributes.txt \
-	      fare_rules.txt \
-	      feed_info.txt \
-	      frequencies.txt \
-	      routes.txt \
-	      shapes.txt \
-	      stop_times.txt \
-	      stops.txt \
-	      trips.txt
+$(OUTPUT)/%/.stamp_downloaded:
+	@mkdir -p $($(PROVIDER)_WORK_DIR)
+	@echo "Creating $($(PROVIDER)_WORK_DIR)"
+	@wget $($(PROVIDER)_REMOTE_URL)/$($(PROVIDER)_ARCHIVE) \
+		-O $($(PROVIDER)_WORK_DIR)/$($(PROVIDER)_ARCHIVE)
+	@touch $@
 
-DATADIR := data
+$(OUTPUT)/%/.stamp_extracted:
+	@unzip $($(PROVIDER)_WORK_DIR)/$($(PROVIDER)_ARCHIVE) \
+		-d $($(PROVIDER)_UNPACK_DIR)
 
-default: $(DATADIR)/archive-extracted
+define gtfs-providers
 
-$(DATADIR):
-	mkdir -p $@
+$(2)_WORK_DIR   = $(OUTPUT)/$(1)
+$(2)_UNPACK_DIR = $$($(2)_WORK_DIR)/gtfs
 
-$(DATADIR)/$(STM_GTS_ZIPFILE): | $(DATADIR)
-	wget -O $@ $(STM_REMOTE_FOLDER)/$(STM_GTS_ZIPFILE)
+$(2)_TARGET_DOWNLOAD = $$($(2)_WORK_DIR)/.stamp_downloaded
+$(2)_TARGET_EXTRACT  = $$($(2)_WORK_DIR)/.stamp_extracted
 
-$(addprefix $(DATADIR)/,$(GTFS_FILES)): $(DATADIR)/archive-extracted
+$(1)-fetch: $$($(2)_TARGET_DOWNLOAD)
 
-# files within the archive have a timestamp before the archive itself
-# so create a timestamp file to prevent future extractions
-$(DATADIR)/archive-extracted: $(DATADIR)/$(STM_GTS_ZIPFILE)
-	unzip -d $(DATADIR) $^
-	touch $@
+$(1)-extract: 			$$($(2)_TARGET_EXTRACT)
+$$($(2)_TARGET_EXTRACT):	$$($(2)_TARGET_DOWNLOAD)
 
-.PHONY: list
-list: $(DATADIR)/trips.txt
-	@echo "Results are display in two columns: Number of trips | Line number"
-	@tail -n+2 $^ | cut -d, -f1 | sort -n | uniq -c | sort -n -r
+$$($(2)_TARGET_DOWNLOAD):	PROVIDER=$(2)
+$$($(2)_TARGET_EXTRACT):	PROVIDER=$(2)
+
+endef
+
+# This is where the GTFS dataset are defined
+include providers.mk
+
+help:
+	@echo "GTFS Importer - Import GTFS data to OpenStreetmap"
+	@echo ""
+	@echo "Helper Makefile to fetch and extract GTFS dataset from know providers"
+	@echo ""
+	@echo "make <provider>-fetch		fetch GTFS archive for <provider>"
+	@echo "make <provider>-extract		extract archive in a work directory"
+	@echo ""
+	@echo "Supported providers:"
+	@echo -e "\tstl (Société de Transport de Laval)"
+	@echo -e "\tstm (Société de Transport de Montréal)"
