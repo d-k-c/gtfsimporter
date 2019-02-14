@@ -186,7 +186,8 @@ class Schedule(object):
 
     def __init__(self):
         self.issues = []
-        self._stops_dict = {}
+        self._stops_by_id = {}
+        self._stops = []
         self._routes_dict = {}
         self._trips_dict = {}
         self._shapes_dict = defaultdict(list)
@@ -197,7 +198,7 @@ class Schedule(object):
 
     @property
     def stops(self):
-        return self._stops_dict.values()
+        return self._stops
 
     def get_bounding_box(self, margin=None):
         bbox = (min(self.stops, key=lambda s: s.lat).lat,
@@ -219,8 +220,29 @@ class Schedule(object):
     def add_route(self, route):
         self._routes_dict[route.id] = route
 
-    def add_stop(self, stop):
-        self._stops_dict[stop.id] = stop
+    def find_duplicate_stop(self, stop):
+        """
+        Return stop if it already exists
+
+        Search for a stop with the same property in the already-found stop list.
+        Some dataset providers duplicate the stops for each line they are served
+        by.
+        """
+        for s in self.stops:
+            if s.name == stop.name and s.ref == stop.ref and \
+               s.lat == stop.lat and s.lon == stop.lon:
+                return s
+
+    def add_stop(self, stop, deduplicate=False):
+        existing_stop = None
+        if deduplicate:
+            existing_stop = self.find_duplicate_stop(stop)
+
+        if existing_stop:
+            self._stops_by_id[stop.id] = existing_stop
+        else:
+            self._stops.append(stop)
+            self._stops_by_id[stop.id] = stop
 
     def add_trip(self, trip):
         self._trips_dict[trip.id] = trip
@@ -248,7 +270,7 @@ class Schedule(object):
             default = args[0]
             return self._stops_dict.get(stop_id, default)
         else:
-            return self._stops_dict[stop_id]
+            return self._stops_by_id[stop_id]
 
 
     def get_trip(self, trip_id, *args):

@@ -54,7 +54,7 @@ class GTFSImporter():
             for row in stopsreader:
                 try:
                     stop = self.agency.make_stop(row)
-                    schedule.add_stop(stop)
+                    schedule.add_stop(stop, deduplicate=True)
                 except SkipEntryError:
                     continue
 
