@@ -56,6 +56,11 @@ class Stop(Node):
         self.bus = bus
         self.public_transport = public_transport
 
+    @property
+    def ref(self):
+        assert len(self.refs) == 1
+        return self.refs[0]
+
     def __repr__(self):
         return "<Stop id={}, refs={}, name={}, coord=[{}, {}]>".format(
                 self.id, self.refs, self.name, self.lon, self.lat)
