@@ -2,10 +2,9 @@
 import os
 import csv
 
-from ..osm.elements import Route, Schedule, Stop, StopTime, Trip
-
-from .stm import StmAgency
+from . import agencies
 from .exceptions import SkipEntryError
+from ..osm.elements import Schedule
 
 class GTFSImporter():
 
@@ -17,7 +16,7 @@ class GTFSImporter():
 
     def __init__(self, path):
         self.path = path
-        self.agency = StmAgency()
+        self.agency = agencies[0]()
 
     def load_stops(self, schedule=None):
         if schedule is None:
