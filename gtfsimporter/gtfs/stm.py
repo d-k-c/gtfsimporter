@@ -2,8 +2,7 @@
 
 from ..osm.elements import Route, Schedule, Stop, StopTime, Trip
 
-class SkipEntryError(Exception):
-    pass
+from .exceptions import SkipEntryError
 
 class StmAgency(object):
 

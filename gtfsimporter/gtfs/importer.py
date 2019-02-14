@@ -4,7 +4,8 @@ import csv
 
 from ..osm.elements import Route, Schedule, Stop, StopTime, Trip
 
-from .stm import SkipEntryError, StmAgency
+from .stm import StmAgency
+from .exceptions import SkipEntryError
 
 class GTFSImporter():
 
