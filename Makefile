@@ -11,6 +11,7 @@ $(OUTPUT)/%/.stamp_downloaded:
 $(OUTPUT)/%/.stamp_extracted:
 	@unzip $($(PROVIDER)_WORK_DIR)/$($(PROVIDER)_ARCHIVE) \
 		-d $($(PROVIDER)_UNPACK_DIR)
+	@touch $@
 
 define gtfs-providers
 
