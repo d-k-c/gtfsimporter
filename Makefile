@@ -1,5 +1,6 @@
 
 OUTPUT := $(CURDIR)/work
+GTFS_IMPORTER := pipenv run python -m gtfsimporter.main
 
 $(OUTPUT)/%/.stamp_downloaded:
 	@mkdir -p $($(PROVIDER)_WORK_DIR)
@@ -14,13 +15,13 @@ $(OUTPUT)/%/.stamp_extracted:
 	@touch $@
 
 $(OUTPUT)/%/.stamp_cache_created:
-	pipenv run python -m gtfsimporter.main \
+	$(GTFS_IMPORTER) \
 		--gtfs-datadir $($(PROVIDER)_UNPACK_DIR) \
 		generate-cache $($(PROVIDER)_CACHE_FILE)
 	@touch $@
 
 $(OUTPUT)/%/.stamp_routes_created:
-	pipenv run python -m gtfsimporter.main \
+	$(GTFS_IMPORTER) \
 		--osm-cache $($(PROVIDER)_CACHE_FILE) \
 		--gtfs-datadir $($(PROVIDER)_UNPACK_DIR) \
 		export-routes --dest $($(PROVIDER)_ROUTES_FILE)
@@ -32,7 +33,7 @@ route_%.osm:
 ifeq ($(route),)
 	$(error "Unspecified route, expecting 'route=<id>' as parameter")
 endif
-	pipenv run python -m gtfsimporter.main \
+	$(GTFS_IMPORTER) \
 		--osm-cache $($(PROVIDER)_CACHE_FILE) \
 		--gtfs-datadir $($(PROVIDER)_UNPACK_DIR) \
 		export-route --dest $@ $(route)
