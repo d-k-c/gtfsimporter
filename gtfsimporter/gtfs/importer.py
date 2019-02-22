@@ -98,7 +98,6 @@ class GTFSImporter():
 
         with open(path, encoding="utf-8-sig") as timefile:
             timereader = csv.DictReader(timefile)
-            row = next(timereader)
 
             for row in timereader:
                 try:
