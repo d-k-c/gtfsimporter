@@ -20,6 +20,13 @@ $(OUTPUT)/%/.stamp_cache_created:
 		generate-cache $($(PROVIDER)_CACHE_FILE)
 	@touch $@
 
+$(OUTPUT)/%/.stamp_stops_created:
+	$(GTFS_IMPORTER) \
+		--osm-cache $($(PROVIDER)_CACHE_FILE) \
+		--gtfs-datadir $($(PROVIDER)_UNPACK_DIR) \
+		export-stops --dest $($(PROVIDER)_STOPS_FILE)
+	@touch $@
+
 $(OUTPUT)/%/.stamp_routes_created:
 	$(GTFS_IMPORTER) \
 		--osm-cache $($(PROVIDER)_CACHE_FILE) \
@@ -44,10 +51,12 @@ define gtfs-providers
 $(2)_WORK_DIR   = $(OUTPUT)/$(1)
 $(2)_UNPACK_DIR = $$($(2)_WORK_DIR)/gtfs
 $(2)_CACHE_FILE = $$($(2)_WORK_DIR)/stops.cache
+$(2)_STOPS_FILE = $$($(2)_WORK_DIR)/stops.osm
 $(2)_ROUTES_FILE = $$($(2)_WORK_DIR)/routes.osm
 
 $(2)_TARGET_DOWNLOAD = $$($(2)_WORK_DIR)/.stamp_downloaded
 $(2)_TARGET_EXTRACT  = $$($(2)_WORK_DIR)/.stamp_extracted
+$(2)_TARGET_STOPS    = $$($(2)_WORK_DIR)/.stamp_stops_created
 $(2)_TARGET_CACHE_STOPS    = $$($(2)_WORK_DIR)/.stamp_cache_created
 # target for a single route
 $(2)_TARGET_ROUTE    = $$($(2)_WORK_DIR)/route_$(route).osm
@@ -57,6 +66,9 @@ $(1)-fetch: $$($(2)_TARGET_DOWNLOAD)
 
 $(1)-extract: 			$$($(2)_TARGET_EXTRACT)
 $$($(2)_TARGET_EXTRACT):	$$($(2)_TARGET_DOWNLOAD)
+
+$(1)-export-stops:		$$($(2)_TARGET_STOPS)
+$$($(2)_TARGET_STOPS):		$$($(2)_TARGET_EXTRACT)
 
 $(1)-generate-stops-cache:	$$($(2)_TARGET_CACHE_STOPS)
 $$($(2)_TARGET_CACHE_STOPS):	$$($(2)_TARGET_EXTRACT)
@@ -72,6 +84,7 @@ $$($(2)_TARGET_ROUTES):		$$($(2)_TARGET_CACHE_STOPS)
 
 $$($(2)_TARGET_DOWNLOAD):	PROVIDER=$(2)
 $$($(2)_TARGET_EXTRACT):	PROVIDER=$(2)
+$$($(2)_TARGET_STOPS):		PROVIDER=$(2)
 $$($(2)_TARGET_CACHE_STOPS):	PROVIDER=$(2)
 $$($(2)_TARGET_ROUTE):		PROVIDER=$(2)
 $$($(2)_TARGET_ROUTES):		PROVIDER=$(2)
@@ -90,6 +103,7 @@ help:
 	@echo "make <provider>-extract		extract archive in a work directory"
 	@echo "make <provider>-generate-stops-cache	generate a cache from latest OSM data"
 	@echo "make <provider>-clean-stops-cache	delete cache timestamp, forcing its renewal"
+	@echo "make <provider>-export-stops	export stops"
 	@echo "make <provider>-export-route	export a single route. Use route=id parameter"
 	@echo "make <provider>-export-routes	export all found bus routes in JOSM format"
 	@echo ""
