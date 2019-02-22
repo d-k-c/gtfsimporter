@@ -144,7 +144,6 @@ class RouteRelation(Relation):
 
         from_stop = to_stop = None
         for stop in self.trip.get_ordered_stops():
-            assert len(stop.refs) == 1
             ref = stop.refs[0]
 
             assert ref in stops, f"missing ref {ref}"
