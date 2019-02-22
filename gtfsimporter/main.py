@@ -59,6 +59,20 @@ def export_route(args):
     doc.export_route(route, osm.stops)
     doc.write(args.dest)
 
+def export_routes(args):
+    gtfs = load_gtfs(args.gtfs_datadir, None,
+                     shapes=args.with_shapes)
+
+    # Get the bounding box. This is used only if an actual
+    # query to Overpass is made
+    bbox = gtfs.get_bounding_box(1000)
+
+    osm = load_osm(args.osm_cache, bbox)
+
+    doc = JosmDocument()
+    doc.export_routes(gtfs.routes, osm.stops)
+    doc.write(args.dest)
+
 def export_stops(args):
     if args.gtfs_datadir is None:
         print("Directory with GTFS files must be specified")
@@ -162,6 +176,20 @@ def parse_command_line():
         metavar="route-id",
         help="identifier of the route in the GTFS routes.txt file")
     export_route_parser.set_defaults(func=export_route)
+
+    export_routes_parser = subparsers.add_parser(
+        "export-routes",
+        help="export all routes in JOSM format")
+    export_routes_parser.add_argument(
+        "--with-shapes",
+        action="store_true",
+        help="export route shapes")
+    export_routes_parser.add_argument(
+        "--dest",
+        type=argparse.FileType('w'),
+        default=sys.stdout,
+        help="Output file")
+    export_routes_parser.set_defaults(func=export_routes)
 
     export_stops_parser = subparsers.add_parser(
         "export-stops",
