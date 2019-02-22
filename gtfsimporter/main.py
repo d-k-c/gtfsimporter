@@ -56,8 +56,9 @@ def export_route(args):
     route = gtfs.get_route(args.route_id)
 
     doc = JosmDocument()
-    doc.export_route(route, osm.stops)
-    doc.write(args.dest)
+    if doc.export_route(route, osm.stops):
+        with open(args.dest, 'w') as output_file:
+            doc.write(output_file)
 
 def export_routes(args):
     gtfs = load_gtfs(args.gtfs_datadir, None,
@@ -70,8 +71,9 @@ def export_routes(args):
     osm = load_osm(args.osm_cache, bbox)
 
     doc = JosmDocument()
-    doc.export_routes(gtfs.routes, osm.stops)
-    doc.write(args.dest)
+    if doc.export_routes(gtfs.routes, osm.stops):
+        with open(args.dest, 'w') as output_file:
+            doc.write(output_file)
 
 def export_stops(args):
     if args.gtfs_datadir is None:
@@ -108,7 +110,8 @@ def export_stops(args):
 
     doc = JosmDocument()
     doc.export_stops(export_stops)
-    doc.write(args.dest)
+    with open(args.dest, 'w') as output_file:
+        doc.write(output_file)
 
 def inspect_stops(args):
     if args.gtfs_datadir is None:
@@ -168,8 +171,6 @@ def parse_command_line():
         help="export route shapes")
     export_route_parser.add_argument(
         "--dest",
-        type=argparse.FileType('w'),
-        default=sys.stdout,
         help="Output file")
     export_route_parser.add_argument(
         "route_id",
@@ -186,8 +187,6 @@ def parse_command_line():
         help="export route shapes")
     export_routes_parser.add_argument(
         "--dest",
-        type=argparse.FileType('w'),
-        default=sys.stdout,
         help="Output file")
     export_routes_parser.set_defaults(func=export_routes)
 
@@ -200,8 +199,6 @@ def parse_command_line():
         help="export only nodes missing in OSM")
     export_stops_parser.add_argument(
         "--dest",
-        type=argparse.FileType('w'),
-        default=sys.stdout,
         help="Output file")
     export_stops_parser.set_defaults(func=export_stops)
 
