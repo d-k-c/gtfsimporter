@@ -232,7 +232,7 @@ class JosmDocument(object):
 
     def export_route(self, route, stop_list):
         routes = (route, )
-        self.export_routes(routes, stop_list)
+        return self.export_routes(routes, stop_list)
 
     def export_routes(self, routes, stop_list):
         stops_by_ref = dict()
@@ -240,13 +240,17 @@ class JosmDocument(object):
             for ref in stop.refs:
                 stops_by_ref[ref] = stop
 
+        successfully_exported_routes = 0
         for route in routes:
             try:
                 route_master = RouteMasterRelation(route, stops_by_ref)
                 route_master.export(self.container)
+                successfully_exported_routes += 1
             except Exception as e:
                 print("Failed to generate route: \"{}\"".format(route.get_name()))
                 print("Following exception occured: {}".format(e))
+
+        return successfully_exported_routes
 
     def write(self, fil):
         self.tree.write(fil, encoding="unicode", xml_declaration=True)
