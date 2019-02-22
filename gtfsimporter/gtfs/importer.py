@@ -31,7 +31,7 @@ class GTFSImporter():
         classes are listed in the `agencies` variable of gtfs/__init__.py.
         """
         path = os.path.join(self.path, self._AGENCY_FILE)
-        with open(path) as agencyfile:
+        with open(path, encoding="utf-8-sig") as agencyfile:
             agencyreader = csv.DictReader(agencyfile)
             row = next(agencyreader)
 
@@ -49,7 +49,7 @@ class GTFSImporter():
             schedule = Schedule()
 
         path = os.path.join(self.path, self._STOPS_FILE)
-        with open(path) as stopsfile:
+        with open(path, encoding="utf-8-sig") as stopsfile:
             stopsreader = csv.DictReader(stopsfile)
             for row in stopsreader:
                 try:
@@ -62,7 +62,7 @@ class GTFSImporter():
 
     def load_routes(self, schedule, routes_of_interest):
         path = os.path.join(self.path, self._ROUTES_FILE)
-        with open(path) as routesfile:
+        with open(path, encoding="utf-8-sig") as routesfile:
             routesreader = csv.DictReader(routesfile)
             for row in routesreader:
                 try:
@@ -78,7 +78,7 @@ class GTFSImporter():
 
     def load_trips(self, schedule):
         path = os.path.join(self.path, self._TRIPS_FILE)
-        with open(path) as tripsfile:
+        with open(path, encoding="utf-8-sig") as tripsfile:
             tripsreader = csv.DictReader(tripsfile)
             for row in tripsreader:
                 try:
@@ -96,7 +96,7 @@ class GTFSImporter():
     def load_stop_times(self, schedule):
         path = os.path.join(self.path, self._STOP_TIMES_FILE)
 
-        with open(path) as timefile:
+        with open(path, encoding="utf-8-sig") as timefile:
             timereader = csv.DictReader(timefile)
             row = next(timereader)
 
@@ -118,7 +118,7 @@ class GTFSImporter():
     def load_shapes(self, schedule):
         path = os.path.join(self.path, self._SHAPES_FILE)
 
-        with open(path) as shapefile:
+        with open(path, encoding="utf-8-sig") as shapefile:
             shapereader = csv.DictReader(shapefile)
             for row in shapereader:
                 shape_id = row["shape_id"]
