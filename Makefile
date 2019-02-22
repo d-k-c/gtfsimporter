@@ -60,6 +60,9 @@ $$($(2)_TARGET_EXTRACT):	$$($(2)_TARGET_DOWNLOAD)
 $(1)-generate-stops-cache:	$$($(2)_TARGET_CACHE_STOPS)
 $$($(2)_TARGET_CACHE_STOPS):	$$($(2)_TARGET_EXTRACT)
 
+$(1)-clean-stops-cache:
+	rm $$($(2)_TARGET_CACHE_STOPS)
+
 $(1)-export-route:		$$($(2)_TARGET_ROUTE)
 $$($(2)_TARGET_ROUTE):		$$($(2)_TARGET_CACHE_STOPS)
 
@@ -85,6 +88,7 @@ help:
 	@echo "make <provider>-fetch		fetch GTFS archive for <provider>"
 	@echo "make <provider>-extract		extract archive in a work directory"
 	@echo "make <provider>-generate-stops-cache	generate a cache from latest OSM data"
+	@echo "make <provider>-clean-stops-cache	delete cache timestamp, forcing its renewal"
 	@echo "make <provider>-export-route	export a single route. Use route=id parameter"
 	@echo "make <provider>-export-routes	export all found bus routes in JOSM format"
 	@echo ""
