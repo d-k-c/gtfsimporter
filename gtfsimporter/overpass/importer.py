@@ -7,8 +7,17 @@ from ..validator.issue import *
 
 
 import overpy
+import requests
 
 class OsmImporter():
+
+    PLATFORM_QUERY = """
+    [out:xml][timeout:30][bbox:{},{},{},{}];
+    (
+        node["public_transport"="platform"]["ref"];
+    );
+    out body;
+    """
 
     def __init__(self, area):
         self.area = area
@@ -29,19 +38,30 @@ class OsmImporter():
             issue = InvalidAttributeValueIssue(stop, tag_name, value, expected_value)
             schedule.issues.append(issue)
 
-    def load_stops(self, schedule, xml=None):
-        query = """
-        [out:xml][timeout:30][bbox:{},{},{},{}];
-        (
-            node["public_transport"="platform"]["ref"];
-        );
-        out body;
+    def generate_cache(self, cache_path):
         """
+        Generate a cache file containing bus platforms
+
+        In order to minimize requests to the Overpass API, a cache file can be
+        used. For now, it caches the result of the query that is used by the
+        load_stops function.
+        """
+        query = self.PLATFORM_QUERY.format(*self.area)
+        r = requests.post("http://overpass-api.de/api/interpreter", data=query)
+        if r.status_code != 200:
+            print(f"Something went wrong when generating cache ({r.status_code}), aborting.")
+            return False
+
+        with open(cache_path, 'w') as cache_file:
+            cache_file.write(r.text)
+
+
+    def load_stops(self, schedule, xml=None):
 
         if xml:
             response = overpy.Result.from_xml(xml, parser=overpy.XML_PARSER_DOM)
         else:
-            query = query.format(*self.area)
+            query = self.PLATFORM_QUERY.format(*self.area)
             api = overpy.Overpass()
             response = api.query(query)
         for node in response.nodes:

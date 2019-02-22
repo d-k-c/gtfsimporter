@@ -123,6 +123,15 @@ def inspect_stops(args):
 
     issues.print_report()
 
+def generate_cache(args):
+    gtfs = Schedule()
+    loader = GTFSImporter(args.gtfs_datadir)
+    loader.load_stops(gtfs)
+
+    bbox = gtfs.get_bounding_box(1000)
+    loader = OsmImporter(bbox)
+    loader.generate_cache(args.output_file)
+
 
 def parse_command_line():
     parser = argparse.ArgumentParser()
@@ -177,6 +186,15 @@ def parse_command_line():
         "load-osm",
         help="Just load OSM")
     test_osm_parser.set_defaults(func=test_osm)
+
+    generate_cache_parser = subparsers.add_parser(
+        "generate-cache",
+        help="generate stops cache to minimize requests to overpass API")
+    generate_cache_parser.add_argument(
+        "output_file",
+        metavar="output-file",
+        help="Cache file")
+    generate_cache_parser.set_defaults(func=generate_cache)
 
     args = parser.parse_args()
     if hasattr(args, "func"):
