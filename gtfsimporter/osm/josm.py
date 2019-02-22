@@ -241,8 +241,12 @@ class JosmDocument(object):
                 stops_by_ref[ref] = stop
 
         for route in routes:
-            route_master = RouteMasterRelation(route, stops_by_ref)
-            route_master.export(self.container)
+            try:
+                route_master = RouteMasterRelation(route, stops_by_ref)
+                route_master.export(self.container)
+            except Exception as e:
+                print("Failed to generate route: \"{}\"".format(route.get_name()))
+                print("Following exception occured: {}".format(e))
 
     def write(self, fil):
         self.tree.write(fil, encoding="unicode", xml_declaration=True)
