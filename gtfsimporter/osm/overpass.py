@@ -28,14 +28,14 @@ class OverpassImporter():
 
     ROUTES_QUERY = """
     [out:xml][timeout:30][bbox:{},{},{},{}];
-    node["public_transport"="platform"]["ref"]->.all_ref_platforms;
-    rel["route"="bus"](bn.all_ref_platforms)->.containing_routes;
+    node["public_transport"="platform"]->.all_platforms;
+    rel["route"="bus"](bn.all_platforms)->.containing_routes;
     rel(br.containing_routes)->.master_routes;
     rel(r.master_routes)->.bus_routes;
+
+    node(r.bus_routes)->.stops_within_routes;
     
-    node(r.bus_routes)->.routed_platforms;
-    
-    (.routed_platforms; .bus_routes; .master_routes;)->._;
+    (.all_platforms; .stops_within_routes; .bus_routes; .master_routes;)->._;
     
     out meta;
     """
