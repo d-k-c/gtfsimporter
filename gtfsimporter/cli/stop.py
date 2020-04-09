@@ -24,7 +24,7 @@ class StopParser(object):
                         osm_stops.append(osm_stop)
 
         doc = JosmDocument()
-        doc.export_stops(osm_stops, False)
+        doc.export_stops(osm_stops)
         with open(args.output_file, 'w', encoding="utf-8") as output_file:
             doc.write(output_file)
 

@@ -209,7 +209,7 @@ class JosmDocument(object):
 
         self.tree = ET.ElementTree(self.container)
 
-    def export_stops(self, stop_list, keep_attributes=False):
+    def export_stops(self, stop_list):
         for stop in stop_list:
             assert stop.name
 
