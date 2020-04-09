@@ -16,6 +16,7 @@ from .validator.validator import StopValidator
 from .validator.issue import IssueList
 
 from .cli.cache import CacheParser
+from .cli.stop import StopParser
 
 def load_gtfs(datadir, route_ids, unique_trips=True, shapes=False):
     if datadir is None:
@@ -258,6 +259,7 @@ def parse_command_line():
     subparsers = parser.add_subparsers(dest="command")
 
     CacheParser.setup_arguments(parser, subparsers)
+    StopParser.setup_arguments(parser, subparsers)
 
     # --gtfs-datadir common option
     #gtfs_datadir_parser = argparse.ArgumentParser(add_help=False)
