@@ -4,15 +4,26 @@ from haversine import haversine
 class StopConflator(object):
 
     def __init__(self, gtfs_stops, osm_stops):
-        self.gtfs_by_ref = {}
-        self.osm_by_ref = {}
-        self.osm_without_ref = []
+        self.gtfs_stops = gtfs_stops
+        self.osm_stops  = osm_stops
 
-        self.populate_by_ref(self.gtfs_by_ref, gtfs_stops)
-        self.populate_by_ref(self.osm_by_ref,
-                             osm_stops,
-                             self.osm_without_ref)
+    def only_in_gtfs(self):
+        osm_refs = self.get_all_refs(self.osm_stops)
 
+        missing_stops = []
+        for gtfs_stop in self.gtfs_stops:
+            for ref in gtfs_stop.refs:
+                if ref not in osm_refs:
+                    missing_stops.append(gtfs_stop)
+
+        return missing_stops
+
+    def get_all_refs(self, stop_list):
+        refs = []
+        for stop in stop_list:
+            refs.extend(stop.refs)
+
+        return refs
 
     def conflate(self, gtfs_stops, osm_stops):
         modified_stops = self.compare_names_by_ref(self.gtfs_by_ref, self.osm_by_ref)
