@@ -6,7 +6,7 @@ def IdFactory():
     i = 0
     while True:
         i -= 1
-        yield str(i)
+        yield i
 
 id_factory = IdFactory()
 
@@ -16,13 +16,23 @@ def GetIdFactory():
 
 class OsmObject:
 
-    def __init__(self, id=None, tags=None):
+    # picked from Overpy, to revert these modifications on attributes
+    GLOBAL_ATTRIBUTE_MODIFIERS = {
+        "changeset": str,
+        "timestamp": lambda dt: dt.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "uid": str,
+        "version": str,
+    }
+
+    def __init__(self, id, tags=None, attrs=None):
         if id is None:
             id = next(GetIdFactory())
-        self.id = id
+        self.osm_id = str(id)
         if tags is None:
             tags = {}
         self.tags = tags
+        self.attrs = attrs
+        self.modified = False
 
 
     def add_tag(self, key, value):
@@ -36,16 +46,22 @@ class OsmObject:
 
     def create_element(self, container, typ):
         element = ET.SubElement(container, typ)
-        element.set("id", self.id)
-        if int(self.id) < 0:
+        element.set("id", self.osm_id)
+        if self.attrs:
+            for key, val in self.attrs.items():
+                if key in OsmObject.GLOBAL_ATTRIBUTE_MODIFIERS:
+                    modifier = OsmObject.GLOBAL_ATTRIBUTE_MODIFIERS[key]
+                    val = modifier(val)
+                element.set(key, val)
+        if int(self.osm_id) < 0 or self.modified:
             element.set("action", "modify")
             element.set("visible", "true")
         return element
 
 class Node(OsmObject):
 
-    def __init__(self, lat, lon, id=None):
-        super().__init__(id)
+    def __init__(self, osm_id, lat, lon, tags=None, attrs=None):
+        super().__init__(osm_id, tags, attrs)
         self.lat = float(lat)
         self.lon = float(lon)
 
@@ -88,8 +104,8 @@ class RelationMember:
 
 class StopRelationMember(RelationMember):
 
-    def __init__(self, ref):
-        super().__init__("node", ref, "platform")
+    def __init__(self, ref, role="platform"):
+        super().__init__("node", ref, role)
 
 
 class WayRelationMember(RelationMember):
@@ -100,8 +116,8 @@ class WayRelationMember(RelationMember):
 
 class Relation(OsmObject):
 
-    def __init__(self, members=None):
-        super().__init__()
+    def __init__(self, osm_id, tags, attributes, members=None):
+        super().__init__(osm_id, tags, attributes)
         if members is None:
             members = []
         self.members = members
@@ -121,87 +137,61 @@ class Relation(OsmObject):
 
 class RouteRelation(Relation):
 
-    def __init__(self, trip, stops):
-        super().__init__()
+    def __init__(self, trip, stops_by_ref):
+        super().__init__(trip.id, trip.tags, trip.attributes)
         self.trip = trip
-        self.stops = stops
+        self.stops_by_ref = stops_by_ref
 
-        self.add_tag("route", "bus")
-        self.add_tag("type", "route")
-        self.add_tag("public_transport:version", "2")
-        self.add_tag("ref", trip.headsign)
-        self.add_tag("name", trip.get_name())
-
-        # handle extra locales for multilingual agencies
-        if hasattr(trip, "extra_locales"):
-            for locale in trip.extra_locales:
-                tag_name = f'name:{locale}'
-                trip_name = trip.get_name(locale)
-                self.add_tag(tag_name, trip_name)
-
-        self.add_tag("network", trip.network)
-        self.add_tag("operator", trip.operator)
-
-        from_stop = to_stop = None
-        for stop in self.trip.get_ordered_stops():
+        for stop in self.trip.stops:
             ref = stop.refs[0]
 
-            assert ref in stops, f"missing ref {ref}"
-            osm_stop = stops[ref]
+            assert ref in stops_by_ref, f"missing ref {ref}"
+            osm_stop = stops_by_ref[ref]
 
-            to_stop = osm_stop.name
-            if from_stop is None:
-                from_stop = osm_stop.name
+            stop_pos = trip.get_stop_position(stop)
+            if stop_pos:
+                stop_pos_member = StopRelationMember(stop_pos, "stop")
+                self.add_member(stop_member)
 
-            stop_member = StopRelationMember(osm_stop.id)
+            stop_role = trip.get_stop_role(stop)
+            if not stop_role:
+                stop_role = "platform"
+
+            stop_member = StopRelationMember(osm_stop.id, stop_role)
             self.add_member(stop_member)
 
-        self.way = None
-        if len(self.trip.way):
-            self.way = Way(self.trip.way)
-            way_member = WayRelationMember(self.way.id)
+        for way in trip.ways:
+            way_member = WayRelationMember(way)
             self.add_member(way_member)
 
-        assert from_stop is not None
-        assert to_stop is not None
-        self.add_tag("from", from_stop)
-        self.add_tag("to", to_stop)
+        assert self.trip.from_stop, f"from_stop is None for {self.trip.name}"
+        assert self.trip.to_stop, f"to_stop is None for {self.trip.name}"
+        self.add_tag("from", self.trip.from_stop)
+        self.add_tag("to", self.trip.to_stop)
+
+        if trip.modified:
+            self.modified = True
 
     def export(self, container):
-        if self.way:
-            self.way.export(container)
+        #if self.way:
+        #    self.way.export(container)
         super().export(container)
 
 
 class RouteMasterRelation(Relation):
 
-    def __init__(self, route, stops):
-        super().__init__()
+    def __init__(self, route, stops_by_ref):
+        super().__init__(route.id, route.tags, route.attributes)
         self.route = route
-        self.stops = stops
-
-        self.add_tag("name", route.get_name())
-
-        # handle extra locales for multilingual agencies
-        if hasattr(route, "extra_locales"):
-            for locale in route.extra_locales:
-                tag_name = f'name:{locale}'
-                route_name = route.get_name(locale)
-                self.add_tag(tag_name, route_name)
-
-        self.add_tag("ref", route.code)
-        self.add_tag("network", route.network)
-        self.add_tag("operator", route.operator)
-
-        self.add_tag("type", "route_master")
-        self.add_tag("route_master", "bus")
-        self.add_tag("public_transport:version", "2")
+        self.stops_by_ref = stops_by_ref
 
         self.route_relations = []
         for trip in self.route.trips:
-            route_rel = RouteRelation(trip, self.stops)
-            self.add_member(RelationMember("relation", route_rel.id, ""))
+            route_rel = RouteRelation(trip, self.stops_by_ref)
+            self.add_member(RelationMember("relation", route_rel.osm_id, ""))
             self.route_relations.append(route_rel)
+
+        self.modified = route.modified
 
     def export(self, container, export_subrelations=True):
         if export_subrelations:
@@ -219,15 +209,14 @@ class JosmDocument(object):
 
         self.tree = ET.ElementTree(self.container)
 
-    def export_stops(self, stop_list):
+    def export_stops(self, stop_list, keep_attributes=False):
         for stop in stop_list:
             assert stop.name
-            node = Node(stop.lat, stop.lon)
-            node.add_tag("bus", "yes")
-            node.add_tag("highway", "bus_stop")
-            node.add_tag("name", stop.name)
-            node.add_tag("public_transport", "platform")
-            node.add_tag("ref", ";".join(stop.refs))
+
+            node = Node(stop.id, stop.lat, stop.lon, stop.tags, stop.attributes)
+            if stop.is_modified():
+                node.modified = True
+
             node.export(self.container)
 
     def export_route(self, route, stop_list):
@@ -237,6 +226,10 @@ class JosmDocument(object):
     def export_routes(self, routes, stop_list):
         stops_by_ref = dict()
         for stop in stop_list:
+            #possible that we encounter a stop mapped without ref in OSM
+            if stop.refs is None:
+                continue
+
             for ref in stop.refs:
                 stops_by_ref[ref] = stop
 
@@ -247,10 +240,13 @@ class JosmDocument(object):
                 route_master.export(self.container)
                 successfully_exported_routes += 1
             except Exception as e:
-                print("Failed to generate route: \"{}\"".format(route.get_name()))
+                print("Failed to generate route: \"{}\"".format(route.name))
                 print("Following exception occured: {}".format(e))
+                #import traceback
+                #traceback.print_tb(e.__traceback__)
 
         return successfully_exported_routes
 
     def write(self, fil):
+        
         self.tree.write(fil, encoding="unicode", xml_declaration=True)

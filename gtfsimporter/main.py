@@ -2,12 +2,16 @@
 import os
 import sys
 import argparse
+import pickle
 
-from .osm.elements import Schedule
+from .elements import Schedule
 
+from .osm.elements import OsmStop
 from .osm.josm import JosmDocument
 from .gtfs.importer import GTFSImporter
-from .overpass.importer import OsmImporter
+from .osm.overpass import OverpassImporter
+from .conflation.routes import RouteConflator
+from .conflation.stops import StopConflator
 from .validator.validator import StopValidator
 from .validator.issue import IssueList
 
@@ -24,23 +28,28 @@ def load_gtfs(datadir, route_ids, unique_trips=True, shapes=False):
     return schedule
 
 def load_osm(osm_cache, bbox):
-    loader = OsmImporter(bbox)
+    loader = OverpassImporter(bbox)
     xml = None
     if osm_cache:
         xml = osm_cache.read()
 
-    schedule = loader.load(xml)
+    osm = Schedule()
+    loader.load_routes(osm, xml)
 
-    return schedule
+    return osm
 
 def test_osm(args):
     schedule = load_osm(args.osm_cache, ())
 
     for route in schedule.routes:
-        print(route.name)
+        if route.code != "747":
+            continue
+
+        print(len(route.trips), route.name)
         for trip in route.trips:
-            none_stops = [stop for stop in trip.stops.values() if stop.stop is None]
-            print("\t", trip.headsign, "Stops:", len(trip), len(none_stops))
+            print("\t", trip.headsign, "Stops:", len(trip))
+            for stop in trip.stops:
+                print("\t\t", stop.name)
 
 def export_route(args):
     route_ids = (args.route_id, )
@@ -72,7 +81,7 @@ def export_routes(args):
 
     doc = JosmDocument()
     if doc.export_routes(gtfs.routes, osm.stops):
-        with open(args.dest, 'w') as output_file:
+        with open(args.dest, 'wb') as output_file:
             doc.write(output_file)
 
 def export_stops(args):
@@ -86,7 +95,7 @@ def export_stops(args):
 
     if args.only_missing:
         bbox = gtfs.get_bounding_box(1000)
-        loader = OsmImporter(bbox)
+        loader = OverpassImporter(bbox)
         xml = None
         if args.osm_cache:
             xml = args.osm_cache.read()
@@ -94,23 +103,35 @@ def export_stops(args):
         osm = Schedule()
         loader.load_stops(osm, xml)
 
-        osm_refs = []
-        for stop in osm.stops:
-            osm_refs.extend(stop.refs)
+        conflator = StopConflator(gtfs.stops, osm.stops) 
+        #export_stops = conflator.conflate(gtfs.stops, osm.stops)
+        #keep_attributes = True
 
-        export_stops = []
-        for stop in gtfs.stops:
-            assert len(stop.refs) == 1
-            ref = stop.refs[0]
+        gtfs_only_stops = conflator.missing_stops_in_osm()
+        if any([len(stop.refs) > 1 for stop in gtfs_only_stops]):
+            print("Ouaile")
+        export_stops = [OsmStop.fromGtfs(s) for s in gtfs_only_stops]
+        keep_attributes = None
 
-            if ref not in osm_refs:
-                export_stops.append(stop)
+
+        #osm_refs = []
+        #for stop in osm.stops:
+        #    osm_refs.extend(stop.refs)
+
+        #export_stops = []
+        #for stop in gtfs.stops:
+        #    assert len(stop.refs) == 1
+        #    ref = stop.refs[0]
+
+        #    if ref not in osm_refs:
+        #        export_stops.append(stop)
     else:
+        keep_attributes = False
         export_stops = gtfs.stops
 
     doc = JosmDocument()
-    doc.export_stops(export_stops)
-    with open(args.dest, 'w') as output_file:
+    doc.export_stops(export_stops, keep_attributes)
+    with open(args.dest, 'w', encoding="utf-8") as output_file:
         doc.write(output_file)
 
 def inspect_stops(args):
@@ -123,7 +144,7 @@ def inspect_stops(args):
     loader.load_stops(gtfs)
 
     bbox = gtfs.get_bounding_box(1000)
-    loader = OsmImporter(bbox)
+    loader = OverpassImporter(bbox)
     xml = None
     if args.osm_cache:
         xml = args.osm_cache.read()
@@ -140,14 +161,94 @@ def inspect_stops(args):
 
     issues.print_report()
 
-def generate_cache(args):
+def generate_cache_stops(args):
     gtfs = Schedule()
     loader = GTFSImporter(args.gtfs_datadir)
     loader.load_stops(gtfs)
 
     bbox = gtfs.get_bounding_box(1000)
-    loader = OsmImporter(bbox)
-    loader.generate_cache(args.output_file)
+    loader = OverpassImporter(bbox)
+    loader.generate_cache_stops(args.output_file)
+
+
+def generate_cache_routes(args):
+
+    gtfs_schedule = load_gtfs(args.gtfs_datadir, None, shapes=False)
+
+    with open(args.gtfs_cache, 'wb') as f:
+        # Pickle the 'data' dictionary using the highest protocol available.
+        pickle.dump(gtfs_schedule, f, pickle.HIGHEST_PROTOCOL)
+
+    bbox = gtfs_schedule.get_bounding_box(1000)
+    loader = OverpassImporter(bbox)
+    loader.generate_cache_routes(args.osm_cache)
+
+def route_export(args):
+    with open(args.gtfs_cache, 'rb') as f:
+        gtfs_schedule = pickle.load(f)
+
+    osm_schedule = load_osm(args.osm_cache, ())
+
+    conflator = RouteConflator(gtfs_schedule, osm_schedule)
+    conflator.conflate_existing_routes()
+
+    modified_routes = []
+
+    for route in osm_schedule.routes:
+        if route.modified:
+            modified_routes.append(route)
+            continue
+
+        for trip in route.trips:
+            if trip.modified:
+                modified_routes.append(route)
+
+    output = JosmDocument() 
+    output.export_routes(modified_routes, osm_schedule.stops)
+
+    with open("/tmp/foobar.osm", "w") as fil:
+        output.write(fil)
+
+def conflate_routes(args):
+    successfully_unpickled = False
+    if args.pickled_gtfs is not None:
+        try:
+            print("Unpickling stored data in", args.pickled_gtfs)
+            with open(args.pickled_gtfs, 'rb') as f:
+                gtfs = pickle.load(f)
+                successfully_unpickled = True
+        except FileNotFoundError as e:
+            pass
+        except Exception as e:
+            print(e)
+            import traceback
+            traceback.print_tb(e.__traceback__)
+
+    print("Successfully unpickled?", successfully_unpickled)
+
+    if not successfully_unpickled:
+        gtfs = load_gtfs(args.gtfs_datadir, None, shapes=False)
+
+        if args.pickled_gtfs is not None:
+            with open(args.pickled_gtfs, 'wb') as f:
+                # Pickle the 'data' dictionary using the highest protocol available.
+                pickle.dump(gtfs, f, pickle.HIGHEST_PROTOCOL)
+
+
+    for route in gtfs.routes:
+        if route.code != "747":
+            continue
+
+        print(len(route.trips), route.name)
+
+        for trip in route.trips:
+            print("\t", trip.headsign, "Stops:", len(trip))
+            for stop in trip.stops:
+                print("\t\t", stop.name)
+
+    #bbox = gtfs.get_bounding_box(1000)
+    #loader = OverpassImporter(bbox)
+    #loader.load_routes(args.output_file)
 
 
 def parse_command_line():
@@ -161,6 +262,12 @@ def parse_command_line():
              "query will be issued to fetch results",
         type=argparse.FileType())
     subparsers = parser.add_subparsers(dest="command")
+
+    # --gtfs-datadir common option
+    #gtfs_datadir_parser = argparse.ArgumentParser(add_help=False)
+    #gtfs_datadir_parser.add_argument(
+    #        "--gtfs-datadir",
+    #        help="Directory containing extracted GTFS files")
 
     export_route_parser = subparsers.add_parser(
         "export-route",
@@ -212,14 +319,68 @@ def parse_command_line():
         help="Just load OSM")
     test_osm_parser.set_defaults(func=test_osm)
 
-    generate_cache_parser = subparsers.add_parser(
-        "generate-cache",
-        help="generate stops cache to minimize requests to overpass API")
-    generate_cache_parser.add_argument(
+    #generate_cache_parser = subparsers.add_parser(
+    #    "generate-cache",
+    #    help="generate stops cache to minimize requests to overpass API")
+    #generate_cache_parser.add_argument(
+    #    "output_file",
+    #    metavar="output-file",
+    #    help="Cache file")
+    #generate_cache_parser.set_defaults(func=generate_cache_stops)
+
+    generate_cache_route_parser = subparsers.add_parser(
+        "generate-cache-routes",
+        help="generate routes cache to minimize requests to overpass API")
+    generate_cache_route_parser.add_argument(
         "output_file",
         metavar="output-file",
         help="Cache file")
-    generate_cache_parser.set_defaults(func=generate_cache)
+    generate_cache_route_parser.set_defaults(func=generate_cache_routes)
+
+    conflate_routes_parser = subparsers.add_parser(
+        "conflate-routes",
+        help="placeholder to test route laoding")
+    conflate_routes_parser.add_argument(
+        "--pickled-gtfs",
+        help="Pickled GTFS schedule file to fasten the process")
+    conflate_routes_parser.set_defaults(func=conflate_routes)
+
+    # routes
+    routes_parser = subparsers.add_parser(
+        "routes",
+        help="submenu for route-related commands")
+    routes_subparsers = routes_parser.add_subparsers(dest="subcommand")
+
+    # route generate-cache
+    generate_cache_parser = routes_subparsers.add_parser(
+        "generate-cache",
+        help="Generate cache for GTFS and OSM data, to accelerate next runs")
+    generate_cache_parser.add_argument(
+        "gtfs_cache", metavar="gtfs-cache",
+        help="file to store GTFS cache (pickle)")
+    generate_cache_parser.add_argument(
+        "osm_cache", metavar="osm-cache",
+        help="file to store OSM cache (XML file)")
+    generate_cache_parser.set_defaults(func=generate_cache_routes)
+
+    # route export
+    route_export_parser = routes_subparsers.add_parser(
+        "export",
+        help="Export routes")
+    route_export_parser.add_argument(
+        "--gtfs-cache",
+        help="Path to GTFS cache file",
+        required=True)
+    group = route_export_parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "--all",
+        help="Export all routes from GTFS dataset",
+        action='store_true')
+    group.add_argument(
+        "--missing",
+        help="Compare OSM and GTFS dataset to export only missing routes",
+        action='store_true')
+    group.set_defaults(func=route_export)
 
     args = parser.parse_args()
     if hasattr(args, "func"):

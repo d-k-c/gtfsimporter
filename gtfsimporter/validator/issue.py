@@ -53,17 +53,19 @@ class OsmStopMissingIssue(Issue):
     description = "GTFS Stops Missing In OSM"
     fields = (
         ("GTFS Stop Code", None),
-        ("Stop Name", 30)
+        ("Stop Name", 30),
+        ("Lat/Lon", 22)
     )
 
     def __init__(self, gtfs_stop):
         self.stop = gtfs_stop
-        assert len(self.stop.refs) == 1
+        #assert len(self.stop.refs) == 1
 
     def line(self):
         ref = self.stop.refs[0]
         name = self.stop.name
-        return self.format_line(ref, name)
+        position = "{}/{}".format(self.stop.lat, self.stop.lon)
+        return self.format_line(ref, name, position)
 
     def report(self):
         ref = self.stop.refs[0]
@@ -83,7 +85,7 @@ class OsmStopWithUnknownRefIssue(Issue):
 
     def __init__(self, osm_stop):
         self.stop = osm_stop
-        assert len(self.stop.refs) == 1
+        #assert len(self.stop.refs) == 1
 
     def line(self):
         return self.format_line(self.stop.id, self.stop.refs[0])

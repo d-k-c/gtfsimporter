@@ -1,6 +1,6 @@
 
 
-from ..osm.elements import Route, Schedule, Stop, StopTime, Trip
+from ..gtfs.elements import GtfsRoute, GtfsStop, GtfsStopTime, GtfsTrip
 
 from .exceptions import SkipEntryError
 
@@ -21,7 +21,7 @@ class StlAgency(object):
     def make_stop_time(self, row):
         raise NotImplementedError("Only export-stops currently is supported")
 
-class StlStop(Stop):
+class StlStop(GtfsStop):
 
     def __init__(self, row):
         stop_id = row["stop_id"]

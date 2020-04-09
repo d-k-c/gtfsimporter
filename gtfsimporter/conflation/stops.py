@@ -1,12 +1,9 @@
 
 from haversine import haversine
 
-from .issue import *
+class StopConflator(object):
 
-class StopValidator(object):
-
-    def __init__(self, issues, gtfs_stops, osm_stops):
-        self.issues = issues
+    def __init__(self, gtfs_stops, osm_stops):
         self.gtfs_by_ref = {}
         self.osm_by_ref = {}
         self.osm_without_ref = []
@@ -15,6 +12,35 @@ class StopValidator(object):
         self.populate_by_ref(self.osm_by_ref,
                              osm_stops,
                              self.osm_without_ref)
+
+
+    def conflate(self, gtfs_stops, osm_stops):
+        modified_stops = self.compare_names_by_ref(self.gtfs_by_ref, self.osm_by_ref)
+
+        return modified_stops
+
+    def missing_stops_in_osm(self):
+        gtfs = set(self.gtfs_by_ref.keys())
+        osm = set(self.osm_by_ref.keys())
+
+        missing_stops = gtfs - osm
+        return [self.gtfs_by_ref[ref] for ref in missing_stops]
+
+    def compare_names_by_ref(self, gtfs_by_ref, osm_by_ref):
+        modified_stops = []
+
+        # iterate over all items in GTFS stops
+        for ref, gtfs_stop in gtfs_by_ref.items():
+
+            # if this ref exists in existing OSM dataset
+            # check both name are the same, otherwise do an update
+            if ref in osm_by_ref:
+                osm_stop = osm_by_ref[ref]
+                if gtfs_stop.name != osm_stop.name:
+                    osm_stop.name = gtfs_stop.name
+                    modified_stops.append(osm_stop)
+
+        return modified_stops
 
     def populate_by_ref(self, dic, stop_list, lst=None):
         for stop in stop_list:

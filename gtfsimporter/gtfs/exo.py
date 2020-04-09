@@ -1,6 +1,6 @@
 
 
-from ..osm.elements import Route, Schedule, Stop, StopTime, Trip
+from ..gtfs.elements import GtfsRoute, GtfsStop, GtfsStopTime, GtfsTrip
 
 from .exceptions import SkipEntryError
 
@@ -67,7 +67,7 @@ class ExoSteJulieAgency(ExoBaseAgency):
     name = "exo-Sainte-Julie"
 
 
-class ExoStop(Stop):
+class ExoStop(GtfsStop):
 
     def __init__(self, row):
         stop_id = row["stop_id"]
@@ -79,7 +79,7 @@ class ExoStop(Stop):
         super().__init__(name, ref, lon, lat, stop_id, None, None, None)
 
 
-class ExoRoute(Route):
+class ExoRoute(GtfsRoute):
 
     def __init__(self, row):
         try:
@@ -98,7 +98,7 @@ class ExoRoute(Route):
 
 
 
-class ExoTrip(Trip):
+class ExoTrip(GtfsTrip):
 
     def __init__(self, row):
         trip_id = row["trip_id"]
@@ -115,7 +115,7 @@ class ExoTrip(Trip):
                 self.route.id, self.headsign)
 
 
-class ExoStopTime(StopTime):
+class ExoStopTime(GtfsStopTime):
 
     def __init__(self, row):
         trip_id = row["trip_id"]

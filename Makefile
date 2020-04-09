@@ -20,6 +20,12 @@ $(OUTPUT)/%/.stamp_cache_created:
 		generate-cache $($(PROVIDER)_CACHE_FILE)
 	@touch $@
 
+$(OUTPUT)/%/.stamp_cache_routes_created:
+	$(GTFS_IMPORTER) \
+		--gtfs-datadir $($(PROVIDER)_UNPACK_DIR) \
+		generate-cache-routes $($(PROVIDER)_ROUTES_CACHE_FILE)
+	@touch $@
+
 $(OUTPUT)/%/.stamp_stops_created:
 	$(GTFS_IMPORTER) \
 		--osm-cache $($(PROVIDER)_CACHE_FILE) \
@@ -51,6 +57,7 @@ define gtfs-providers
 $(2)_WORK_DIR   = $(OUTPUT)/$(1)
 $(2)_UNPACK_DIR = $$($(2)_WORK_DIR)/gtfs
 $(2)_CACHE_FILE = $$($(2)_WORK_DIR)/stops.cache
+$(2)_ROUTES_CACHE_FILE = $$($(2)_WORK_DIR)/routes.cache
 $(2)_STOPS_FILE = $$($(2)_WORK_DIR)/stops.osm
 $(2)_ROUTES_FILE = $$($(2)_WORK_DIR)/routes.osm
 
@@ -58,6 +65,7 @@ $(2)_TARGET_DOWNLOAD = $$($(2)_WORK_DIR)/.stamp_downloaded
 $(2)_TARGET_EXTRACT  = $$($(2)_WORK_DIR)/.stamp_extracted
 $(2)_TARGET_STOPS    = $$($(2)_WORK_DIR)/.stamp_stops_created
 $(2)_TARGET_CACHE_STOPS    = $$($(2)_WORK_DIR)/.stamp_cache_created
+$(2)_TARGET_CACHE_ROUTES   = $$($(2)_WORK_DIR)/.stamp_cache_routes_created
 # target for a single route
 $(2)_TARGET_ROUTE    = $$($(2)_WORK_DIR)/route_$(route).osm
 $(2)_TARGET_ROUTES   = $$($(2)_WORK_DIR)/.stamp_routes_created
@@ -73,6 +81,9 @@ $$($(2)_TARGET_STOPS):		$$($(2)_TARGET_EXTRACT)
 $(1)-generate-stops-cache:	$$($(2)_TARGET_CACHE_STOPS)
 $$($(2)_TARGET_CACHE_STOPS):	$$($(2)_TARGET_EXTRACT)
 
+$(1)-generate-routes-cache:	$$($(2)_TARGET_CACHE_ROUTES)
+$$($(2)_TARGET_CACHE_ROUTES):	$$($(2)_TARGET_EXTRACT)
+
 $(1)-clean-stops-cache:
 	rm $$($(2)_TARGET_CACHE_STOPS)
 
@@ -86,6 +97,7 @@ $$($(2)_TARGET_DOWNLOAD):	PROVIDER=$(2)
 $$($(2)_TARGET_EXTRACT):	PROVIDER=$(2)
 $$($(2)_TARGET_STOPS):		PROVIDER=$(2)
 $$($(2)_TARGET_CACHE_STOPS):	PROVIDER=$(2)
+$$($(2)_TARGET_CACHE_ROUTES):	PROVIDER=$(2)
 $$($(2)_TARGET_ROUTE):		PROVIDER=$(2)
 $$($(2)_TARGET_ROUTES):		PROVIDER=$(2)
 

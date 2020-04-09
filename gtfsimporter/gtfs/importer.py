@@ -4,7 +4,7 @@ import csv
 
 from . import agencies
 from .exceptions import SkipEntryError
-from ..osm.elements import Schedule
+from ..elements import Schedule
 
 class GTFSImporter():
 
@@ -89,7 +89,6 @@ class GTFSImporter():
                 # route will exist only if it was deemed of interest by load_routes
                 route = schedule.get_route(trip.route_id, None)
                 if route:
-                    trip.add_route(route)
                     route.add_trip(trip)
                     schedule.add_trip(trip)
 
@@ -110,9 +109,8 @@ class GTFSImporter():
                 trip = schedule.get_trip(stop_time.trip_id, None)
                 if trip is not None:
                     stop = schedule.get_stop(stop_time.stop_id)
-                    stop_time.set_stop(stop)
+                    trip.add_stop(stop_time.sequence, stop)
 
-                    schedule.add_stop_time(trip, stop_time)
 
     def load_shapes(self, schedule):
         path = os.path.join(self.path, self._SHAPES_FILE)
