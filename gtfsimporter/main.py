@@ -15,6 +15,8 @@ from .conflation.stops import StopConflator
 from .validator.validator import StopValidator
 from .validator.issue import IssueList
 
+from .cli.cache import CacheParser
+
 def load_gtfs(datadir, route_ids, unique_trips=True, shapes=False):
     if datadir is None:
         print("Directory with GTFS files must be specified")
@@ -253,15 +255,9 @@ def conflate_routes(args):
 
 def parse_command_line():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--gtfs-datadir",
-        help="directory containing GTFS files")
-    parser.add_argument(
-        "--osm-cache",
-        help="XML file containing query result. If omitted, an overpass " \
-             "query will be issued to fetch results",
-        type=argparse.FileType())
     subparsers = parser.add_subparsers(dest="command")
+
+    CacheParser.setup_arguments(parser, subparsers)
 
     # --gtfs-datadir common option
     #gtfs_datadir_parser = argparse.ArgumentParser(add_help=False)
