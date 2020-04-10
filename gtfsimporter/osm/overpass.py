@@ -128,19 +128,29 @@ class OverpassImporter():
                     stop_position = member.ref
                 elif member.role.startswith("platform"):
                     stop = schedule.get_stop(member.ref, None)
-                    assert stop is not None, \
-                           f"stop with id <{member.ref}> missing in OSM dataset"
+
+                    if stop is None:
+                        trip.set_import_error(
+                           f"stop with id <{member.ref}> missing in OSM dataset")
+                        break
 
                     trip.append_stop(stop, member.role, stop_position)
                     stop_position = None
                 else:
-                    raise AttributeError(
-                        "Unexpected role {} found in {}".format(member.role, trip.name))
+                    trip.set_import_error(
+                        f"Unexpected node role '{member.role}' found in {trip.name}")
+                    break
             elif isinstance(member, overpy.RelationWay):
-                assert stop_position is None, \
-                       f"unexpected stop position in {trip.name}"
-                assert member.role == "", \
-                       f"way with role in {trip.name}"
+                if stop_position is not None:
+                    trip.set_import_error(
+                       f"unexpected stop position in {trip.name}")
+                    break
+
+                if member.role != "":
+                    trip.set_import_error(
+                       f"way with role in {trip.name}")
+                    break
+
                 trip.append_way(member.ref)
 
         return trip

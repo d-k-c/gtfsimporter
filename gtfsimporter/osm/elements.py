@@ -115,6 +115,7 @@ class OsmTrip(OsmElement):
         self.stops_data = {}
         self.stops = []
         self.ways = []
+        self.error = None
 
     @classmethod
     def fromGtfs(cls, gtfs_trip, osm_schedule):
@@ -165,6 +166,14 @@ class OsmTrip(OsmElement):
 
     def __len__(self):
         return len(self.stops)
+
+    def set_import_error(self, error):
+        self.error = error
+        self.modified = False
+        self.set_tag = None
+
+    def import_failed(self):
+        return self.error is not None
 
     def set_route(self, route):
         self.parent_route = route
