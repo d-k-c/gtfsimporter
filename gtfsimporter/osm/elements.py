@@ -169,7 +169,7 @@ class OsmTrip(OsmElement):
     def set_route(self, route):
         self.parent_route = route
 
-    def append_stop(self, stop, role="platform", stop_position=None):
+    def append_stop(self, stop, role, stop_position=None):
         self.stops.append(stop)
         self.stops_data[stop] = (role, stop_position)
 
@@ -184,7 +184,7 @@ class OsmTrip(OsmElement):
         return stop_pos
 
     def get_stop_role(self, stop):
-        role, _ = self.stops_data.get(stop, (None, None))
+        role, _ = self.stops_data.get(stop, ("platform", None))
         return role
 
     def __repr__(self):
