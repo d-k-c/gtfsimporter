@@ -16,6 +16,7 @@ from .validator.validator import StopValidator
 from .validator.issue import IssueList
 
 from .cli.cache import CacheParser
+from .cli.route import RouteParser
 from .cli.stop import StopParser
 
 def load_gtfs(datadir, route_ids, unique_trips=True, shapes=False):
@@ -260,6 +261,7 @@ def parse_command_line():
 
     CacheParser.setup_arguments(parser, subparsers)
     StopParser.setup_arguments(parser, subparsers)
+    RouteParser.setup_arguments(parser, subparsers)
 
     # --gtfs-datadir common option
     #gtfs_datadir_parser = argparse.ArgumentParser(add_help=False)
@@ -344,41 +346,41 @@ def parse_command_line():
     conflate_routes_parser.set_defaults(func=conflate_routes)
 
     # routes
-    routes_parser = subparsers.add_parser(
-        "routes",
-        help="submenu for route-related commands")
-    routes_subparsers = routes_parser.add_subparsers(dest="subcommand")
+    #routes_parser = subparsers.add_parser(
+    #    "routes",
+    #    help="submenu for route-related commands")
+    #routes_subparsers = routes_parser.add_subparsers(dest="subcommand")
 
-    # route generate-cache
-    generate_cache_parser = routes_subparsers.add_parser(
-        "generate-cache",
-        help="Generate cache for GTFS and OSM data, to accelerate next runs")
-    generate_cache_parser.add_argument(
-        "gtfs_cache", metavar="gtfs-cache",
-        help="file to store GTFS cache (pickle)")
-    generate_cache_parser.add_argument(
-        "osm_cache", metavar="osm-cache",
-        help="file to store OSM cache (XML file)")
-    generate_cache_parser.set_defaults(func=generate_cache_routes)
+    ## route generate-cache
+    #generate_cache_parser = routes_subparsers.add_parser(
+    #    "generate-cache",
+    #    help="Generate cache for GTFS and OSM data, to accelerate next runs")
+    #generate_cache_parser.add_argument(
+    #    "gtfs_cache", metavar="gtfs-cache",
+    #    help="file to store GTFS cache (pickle)")
+    #generate_cache_parser.add_argument(
+    #    "osm_cache", metavar="osm-cache",
+    #    help="file to store OSM cache (XML file)")
+    #generate_cache_parser.set_defaults(func=generate_cache_routes)
 
-    # route export
-    route_export_parser = routes_subparsers.add_parser(
-        "export",
-        help="Export routes")
-    route_export_parser.add_argument(
-        "--gtfs-cache",
-        help="Path to GTFS cache file",
-        required=True)
-    group = route_export_parser.add_mutually_exclusive_group(required=True)
-    group.add_argument(
-        "--all",
-        help="Export all routes from GTFS dataset",
-        action='store_true')
-    group.add_argument(
-        "--missing",
-        help="Compare OSM and GTFS dataset to export only missing routes",
-        action='store_true')
-    group.set_defaults(func=route_export)
+    ## route export
+    #route_export_parser = routes_subparsers.add_parser(
+    #    "export",
+    #    help="Export routes")
+    #route_export_parser.add_argument(
+    #    "--gtfs-cache",
+    #    help="Path to GTFS cache file",
+    #    required=True)
+    #group = route_export_parser.add_mutually_exclusive_group(required=True)
+    #group.add_argument(
+    #    "--all",
+    #    help="Export all routes from GTFS dataset",
+    #    action='store_true')
+    #group.add_argument(
+    #    "--missing",
+    #    help="Compare OSM and GTFS dataset to export only missing routes",
+    #    action='store_true')
+    #group.set_defaults(func=route_export)
 
     args = parser.parse_args()
     if hasattr(args, "func"):
