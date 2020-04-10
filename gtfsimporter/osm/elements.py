@@ -203,7 +203,7 @@ class OsmRoute(OsmElement):
     def fromGtfs(cls, gtfs_route, osm_schedule):
         route = cls(None, None, None)
         route.merge_tags(gtfs_route)
-        route.__merge_gtfs(gtfs_trip, osm_schedule)
+        route.__merge_gtfs(gtfs_route, osm_schedule)
 
         return route
 
