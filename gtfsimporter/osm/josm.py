@@ -137,23 +137,18 @@ class Relation(OsmObject):
 
 class RouteRelation(Relation):
 
-    def __init__(self, trip, stops_by_ref):
+    def __init__(self, trip):
         super().__init__(trip.id, trip.tags, trip.attributes)
         self.trip = trip
-        self.stops_by_ref = stops_by_ref
 
-        for stop in self.trip.stops:
-            ref = stop.refs[0]
+        for osm_stop in self.trip.stops:
 
-            assert ref in stops_by_ref, f"missing ref {ref}"
-            osm_stop = stops_by_ref[ref]
-
-            stop_pos = trip.get_stop_position(stop)
+            stop_pos = trip.get_stop_position(osm_stop)
             if stop_pos:
                 stop_pos_member = StopRelationMember(stop_pos, "stop")
                 self.add_member(stop_member)
 
-            stop_role = trip.get_stop_role(stop)
+            stop_role = trip.get_stop_role(osm_stop)
             if not stop_role:
                 stop_role = "platform"
 
@@ -180,14 +175,13 @@ class RouteRelation(Relation):
 
 class RouteMasterRelation(Relation):
 
-    def __init__(self, route, stops_by_ref):
+    def __init__(self, route):
         super().__init__(route.id, route.tags, route.attributes)
         self.route = route
-        self.stops_by_ref = stops_by_ref
 
         self.route_relations = []
         for trip in self.route.trips:
-            route_rel = RouteRelation(trip, self.stops_by_ref)
+            route_rel = RouteRelation(trip)
             self.add_member(RelationMember("relation", route_rel.osm_id, ""))
             self.route_relations.append(route_rel)
 
@@ -223,30 +217,11 @@ class JosmDocument(object):
         routes = (route, )
         return self.export_routes(routes, stop_list)
 
-    def export_routes(self, routes, stop_list):
-        stops_by_ref = dict()
-        for stop in stop_list:
-            #possible that we encounter a stop mapped without ref in OSM
-            if stop.refs is None:
-                continue
-
-            for ref in stop.refs:
-                stops_by_ref[ref] = stop
-
-        successfully_exported_routes = 0
+    def export_routes(self, routes):
         for route in routes:
-            try:
-                route_master = RouteMasterRelation(route, stops_by_ref)
-                route_master.export(self.container)
-                successfully_exported_routes += 1
-            except Exception as e:
-                print("Failed to generate route: \"{}\"".format(route.name))
-                print("Following exception occured: {}".format(e))
-                #import traceback
-                #traceback.print_tb(e.__traceback__)
+            route_master = RouteMasterRelation(route)
+            route_master.export(self.container)
 
-        return successfully_exported_routes
 
     def write(self, fil):
-        
         self.tree.write(fil, encoding="unicode", xml_declaration=True)
