@@ -1,6 +1,7 @@
 
 from .loader import GtfsLoader, SchedulesLoader
 
+from ..conflation.routes import RouteConflator
 from ..osm.elements import OsmRoute
 from ..osm.josm import JosmDocument
 
@@ -17,6 +18,16 @@ class RouteParser(object):
             selected_routes = [r for r in gtfs.routes if r.ref in wanted_refs]
 
         cls.__export_gtfs_routes(selected_routes, osm, args.output_file)
+
+
+    @classmethod
+    def generate_missing_routes(cls, args):
+        gtfs, osm = SchedulesLoader.load_from_args(args)
+
+        conflator = RouteConflator(gtfs, osm)
+        missing_routes = conflator.only_in_gtfs()
+
+        cls.__export_gtfs_routes(missing_routes, osm, args.output_file)
 
 
     @classmethod
@@ -60,3 +71,15 @@ class RouteParser(object):
 
         SchedulesLoader.setup_arguments(route_export_parser, subparsers)
         route_export_parser.set_defaults(func=RouteParser.generate_routes)
+
+        # COMMAND: route export-missing
+        route_missing_parser = route_subparsers.add_parser(
+            "export-missing",
+            help="Export routes missing in OSM")
+        route_missing_parser.add_argument(
+            "--output-file",
+            required=True,
+            help="File to store generated routes")
+
+        SchedulesLoader.setup_arguments(route_missing_parser, subparsers)
+        route_missing_parser.set_defaults(func=RouteParser.generate_missing_routes)
