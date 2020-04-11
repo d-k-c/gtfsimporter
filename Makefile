@@ -14,31 +14,55 @@ $(OUTPUT)/%/.stamp_extracted:
 		-d $($(PROVIDER)_UNPACK_DIR)
 	@touch $@
 
-$(OUTPUT)/%/.stamp_cache_created:
+$(OUTPUT)/%/gtfs.pickle:
+	@echo "Generating GTFS cache: $@"
+	@echo "It can take several minutes to complete"
 	$(GTFS_IMPORTER) \
-		--gtfs-datadir $($(PROVIDER)_UNPACK_DIR) \
-		generate-cache $($(PROVIDER)_CACHE_FILE)
-	@touch $@
+		cache pickle-gtfs \
+			--gtfs-datadir $($(PROVIDER)_UNPACK_DIR) \
+			--output-file $@
 
-$(OUTPUT)/%/.stamp_cache_routes_created:
+$(OUTPUT)/%/osm.xml:
+	@echo "Generating OSM XML cache with latest OSM data"
 	$(GTFS_IMPORTER) \
-		--gtfs-datadir $($(PROVIDER)_UNPACK_DIR) \
-		generate-cache-routes $($(PROVIDER)_ROUTES_CACHE_FILE)
-	@touch $@
+		cache query-osm \
+			--gtfs-pickle $($(PROVIDER)_GTFS_PICKLE_FILE) \
+			--output-file $@
 
-$(OUTPUT)/%/.stamp_stops_created:
+$(OUTPUT)/%/osm.pickle:
+	@echo "Generating OSM pickle file: $@"
 	$(GTFS_IMPORTER) \
-		--osm-cache $($(PROVIDER)_CACHE_FILE) \
-		--gtfs-datadir $($(PROVIDER)_UNPACK_DIR) \
-		export-stops --dest $($(PROVIDER)_STOPS_FILE)
-	@touch $@
+		cache pickle-osm \
+			--osm-xml $($(PROVIDER)_OSM_XML_FILE) \
+			--output-file $@
 
-$(OUTPUT)/%/.stamp_routes_created:
+$(OUTPUT)/%/stops.osm:
 	$(GTFS_IMPORTER) \
-		--osm-cache $($(PROVIDER)_CACHE_FILE) \
-		--gtfs-datadir $($(PROVIDER)_UNPACK_DIR) \
-		export-routes --dest $($(PROVIDER)_ROUTES_FILE)
-	@touch $@
+		stops export \
+			--gtfs-datadir $($(PROVIDER)_UNPACK_DIR) \
+			--output-file $@
+
+$(OUTPUT)/%/missing_stops:
+	$(GTFS_IMPORTER) \
+		stops export-missing \
+			--gtfs-pickle $($(PROVIDER)_GTFS_PICKLE_FILE) \
+			--osm-pickle $($(PROVIDER)_OSM_PICKLE_FILE) \
+			--output-file $@
+
+$(OUTPUT)/%/routes.osm:
+	$(GTFS_IMPORTER) \
+		routes export \
+			--gtfs-pickle $($(PROVIDER)_GTFS_PICKLE_FILE) \
+			--osm-pickle $($(PROVIDER)_OSM_PICKLE_FILE) \
+			--output-file $@
+
+$(OUTPUT)/%/missing_routes.osm:
+	$(GTFS_IMPORTER) \
+		routes export-missing \
+			--gtfs-pickle $($(PROVIDER)_GTFS_PICKLE_FILE) \
+			--osm-pickle $($(PROVIDER)_OSM_PICKLE_FILE) \
+			--output-file $@
+
 
 # Make is not fond of two "%" in a target. Work around it
 # by dropping the prefix
@@ -54,52 +78,74 @@ endif
 
 define gtfs-providers
 
-$(2)_WORK_DIR   = $(OUTPUT)/$(1)
-$(2)_UNPACK_DIR = $$($(2)_WORK_DIR)/gtfs
-$(2)_CACHE_FILE = $$($(2)_WORK_DIR)/stops.cache
-$(2)_ROUTES_CACHE_FILE = $$($(2)_WORK_DIR)/routes.cache
-$(2)_STOPS_FILE = $$($(2)_WORK_DIR)/stops.osm
-$(2)_ROUTES_FILE = $$($(2)_WORK_DIR)/routes.osm
+# download and extract
+$(2)_WORK_DIR		= $(OUTPUT)/$(1)
+$(2)_UNPACK_DIR 	= $$($(2)_WORK_DIR)/gtfs
+# cache (picke and xml)
+$(2)_GTFS_PICKLE_FILE 	= $$($(2)_WORK_DIR)/gtfs.pickle
+$(2)_OSM_XML_FILE 	= $$($(2)_WORK_DIR)/osm.xml
+$(2)_OSM_PICKLE_FILE 	= $$($(2)_WORK_DIR)/osm.pickle
+# stops
+$(2)_STOPS_FILE 	= $$($(2)_WORK_DIR)/stops.osm
+$(2)_MISSING_STOPS_FILE = $$($(2)_WORK_DIR)/missing_stops.osm
+# routes
+$(2)_ROUTES_FILE 	= $$($(2)_WORK_DIR)/routes.osm
+$(2)_MISSING_ROUTES_FILE = $$($(2)_WORK_DIR)/missing_routes.osm
 
-$(2)_TARGET_DOWNLOAD = $$($(2)_WORK_DIR)/.stamp_downloaded
-$(2)_TARGET_EXTRACT  = $$($(2)_WORK_DIR)/.stamp_extracted
-$(2)_TARGET_STOPS    = $$($(2)_WORK_DIR)/.stamp_stops_created
-$(2)_TARGET_CACHE_STOPS    = $$($(2)_WORK_DIR)/.stamp_cache_created
-$(2)_TARGET_CACHE_ROUTES   = $$($(2)_WORK_DIR)/.stamp_cache_routes_created
 # target for a single route
 $(2)_TARGET_ROUTE    = $$($(2)_WORK_DIR)/route_$(route).osm
-$(2)_TARGET_ROUTES   = $$($(2)_WORK_DIR)/.stamp_routes_created
+
+$(2)_TARGET_DOWNLOAD	= $$($(2)_WORK_DIR)/.stamp_downloaded
+$(2)_TARGET_EXTRACT	= $$($(2)_WORK_DIR)/.stamp_extracted
+$(2)_TARGET_PICKLE_GTFS = $$($(2)_GTFS_PICKLE_FILE)
+$(2)_TARGET_QUERY_OSM 	= $$($(2)_OSM_XML_FILE)
+$(2)_TARGET_PICKLE_OSM  = $$($(2)_OSM_PICKLE_FILE)
+$(2)_TARGET_STOPS    	= $$($(2)_STOPS_FILE)
+$(2)_TARGET_STOPS_MISSING = $$($(2)_MISSING_STOPS_FILE)
+$(2)_TARGET_ROUTES   	= $$($(2)_ROUTES_FILE)
+$(2)_TARGET_ROUTES_MISSING = $$($(2)_MISSING_ROUTES_FILE)
 
 $(1)-fetch: $$($(2)_TARGET_DOWNLOAD)
 
 $(1)-extract: 			$$($(2)_TARGET_EXTRACT)
 $$($(2)_TARGET_EXTRACT):	$$($(2)_TARGET_DOWNLOAD)
 
+$(1)-pickle-gtfs:		$$($(2)_TARGET_PICKLE_GTFS)
+$$($(2)_TARGET_PICKLE_GTFS):	$$($(2)_TARGET_EXTRACT)
+
+$(1)-query-osm:			$$($(2)_TARGET_QUERY_OSM)
+$$($(2)_TARGET_QUERY_OSM):	$$($(2)_TARGET_EXTRACT)
+
+$(1)-pickle-osm:		$$($(2)_TARGET_PICKLE_OSM)
+$$($(2)_TARGET_PICKLE_OSM):	$$($(2)_TARGET_QUERY_OSM)
+
 $(1)-export-stops:		$$($(2)_TARGET_STOPS)
 $$($(2)_TARGET_STOPS):		$$($(2)_TARGET_EXTRACT)
 
-$(1)-generate-stops-cache:	$$($(2)_TARGET_CACHE_STOPS)
-$$($(2)_TARGET_CACHE_STOPS):	$$($(2)_TARGET_EXTRACT)
-
-$(1)-generate-routes-cache:	$$($(2)_TARGET_CACHE_ROUTES)
-$$($(2)_TARGET_CACHE_ROUTES):	$$($(2)_TARGET_EXTRACT)
-
-$(1)-clean-stops-cache:
-	rm $$($(2)_TARGET_CACHE_STOPS)
-
-$(1)-export-route:		$$($(2)_TARGET_ROUTE)
-$$($(2)_TARGET_ROUTE):		$$($(2)_TARGET_CACHE_STOPS)
+$(1)-export-stops-missing:	$$($(2)_TARGET_STOPS_MISSING)
+$$($(2)_TARGET_STOPS_MISSING):	$$($(2)_TARGET_PICKLE_GTFS) $$($(2)_TARGET_QUERY_OSM)
 
 $(1)-export-routes:		$$($(2)_TARGET_ROUTES)
-$$($(2)_TARGET_ROUTES):		$$($(2)_TARGET_CACHE_STOPS)
+$$($(2)_TARGET_ROUTES):		$$($(2)_TARGET_PICKLE_GTFS) $$($(2)_TARGET_PICKLE_OSM)
+
+$(1)-export-routes-missing:	$$($(2)_TARGET_ROUTES_MISSING)
+$$($(2)_TARGET_ROUTES_MISSING):	$$($(2)_TARGET_PICKLE_GTFS) $$($(2)_TARGET_PICKLE_OSM)
+
+$(1)-cache:			$$($(2)_TARGET_PICKLE_GTFS) $$($(2)_TARGET_PICKLE_OSM)
+
+$(1)-cleanall:
+	@echo rm -rf $$($(2)_WORK_DIR)
+
 
 $$($(2)_TARGET_DOWNLOAD):	PROVIDER=$(2)
 $$($(2)_TARGET_EXTRACT):	PROVIDER=$(2)
+$$($(2)_TARGET_PICKLE_GTFS):	PROVIDER=$(2)
+$$($(2)_TARGET_QUERY_OSM):	PROVIDER=$(2)
+$$($(2)_TARGET_PICKLE_OSM):	PROVIDER=$(2)
 $$($(2)_TARGET_STOPS):		PROVIDER=$(2)
-$$($(2)_TARGET_CACHE_STOPS):	PROVIDER=$(2)
-$$($(2)_TARGET_CACHE_ROUTES):	PROVIDER=$(2)
-$$($(2)_TARGET_ROUTE):		PROVIDER=$(2)
+$$($(2)_TARGET_STOPS_MISSING):	PROVIDER=$(2)
 $$($(2)_TARGET_ROUTES):		PROVIDER=$(2)
+$$($(2)_TARGET_ROUTES_MISSING):	PROVIDER=$(2)
 
 endef
 
@@ -111,13 +157,25 @@ help:
 	@echo ""
 	@echo "Helper Makefile to fetch and extract GTFS dataset from know providers"
 	@echo ""
+	@echo ""
+	@echo "Getting GTFS data:"
 	@echo "make <provider>-fetch		fetch GTFS archive for <provider>"
-	@echo "make <provider>-extract		extract archive in a work directory"
-	@echo "make <provider>-generate-stops-cache	generate a cache from latest OSM data"
-	@echo "make <provider>-clean-stops-cache	delete cache timestamp, forcing its renewal"
-	@echo "make <provider>-export-stops	export stops"
-	@echo "make <provider>-export-route	export a single route. Use route=id parameter"
-	@echo "make <provider>-export-routes	export all found bus routes in JOSM format"
+	@echo "make <provider>-extract		extract archive in work directory"
+	@echo ""
+	@echo "Cache section:"
+	@echo "make <provider>-pickle-gtfs	generate cache from GTFS data"
+	@echo "make <provider>-query-osm	generate XML file with latest OSM data"
+	@echo "make <provider>-pickle-osm	generate cache from OSM data"
+	@echo "make <provider>-cache		alias for pickle-gtfs and pickle-osm"
+	@echo ""
+	@echo "Stops section:"
+	@echo "make <provider>-export-stops		export all GTFS stops"
+	@echo "make <provider>-export-stops-missing	export stops missing in OSM"
+	@echo ""
+	@echo "Routes section:"
+	@echo "make <provider>-export-routes		export all GTFS routes"
+	@echo "make <provider>-export-routes-missing	export routes missing in OSM"
+	@echo ""
 	@echo ""
 	@echo "Supported providers:"
 	@echo -e "\texo-chambly (Chambly-Richelieu-Carignan)"
