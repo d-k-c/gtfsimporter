@@ -11,26 +11,28 @@ class RouteParser(object):
         gtfs, osm = SchedulesLoader.load_from_args(args)
 
         if args.route_ref is None:
-            match_fn = lambda route: True
+            selected_routes = gtfs.routes
         else:
             wanted_refs = args.route_ref.split(",")
-            match_fn = lambda route: route.ref in wanted_refs
+            selected_routes = [r for r in gtfs.routes if r.ref in wanted_refs]
 
-        new_routes = []
-        for route in gtfs.routes:
-            if not match_fn(route):
-                continue
+        cls.__export_gtfs_routes(selected_routes, osm, args.output_file)
 
+
+    @classmethod
+    def __export_gtfs_routes(cls, gtfs_routes, osm_schedule, out_file):
+        osm_routes = []
+
+        for route in gtfs_routes:
             try:
-                osm_route = OsmRoute.fromGtfs(route, osm)
-                new_routes.append(osm_route)
+                osm_route = OsmRoute.fromGtfs(route, osm_schedule)
+                osm_routes.append(osm_route)
             except Exception as e:
                 print(f"Unable to generate route {route.ref}: {e}")
 
-        print(len(new_routes))
         doc = JosmDocument()
-        doc.export_routes(new_routes)
-        with open(args.output_file, 'w', encoding="utf-8") as output_file:
+        doc.export_routes(osm_routes)
+        with open(out_file, 'w', encoding="utf-8") as output_file:
             doc.write(output_file)
 
 
