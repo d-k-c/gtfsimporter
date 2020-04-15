@@ -200,6 +200,10 @@ class OsmTrip(OsmElement):
         return "<Trip id={}, name={}, {} stops>".format(self.id, self.ref, len(self.stops))
 
 
+class OsmTripsNotUpdatedError(Exception):
+    pass
+
+
 class OsmRoute(OsmElement):
 
     element_tags = ["name", "network", "operator", "ref"]
@@ -211,10 +215,13 @@ class OsmRoute(OsmElement):
     @classmethod
     def fromGtfs(cls, gtfs_route, osm_schedule):
         route = cls(None, None, None)
-        route.merge_tags(gtfs_route)
-        route.__merge_gtfs(gtfs_route, osm_schedule)
+        route.merge_gtfs(gtfs_route, osm_schedule)
 
         return route
+
+    def merge_gtfs(self, gtfs_route, osm_schedule):
+        self.merge_tags(gtfs_route)
+        self.merge_trips(gtfs_route, osm_schedule)
 
     def merge_tags(self, gtfs_route):
         self.name = gtfs_route.name
@@ -226,11 +233,25 @@ class OsmRoute(OsmElement):
         self.set_tag("type", "route_master")
 
 
-    def __merge_gtfs(self, gtfs_route, osm_schedule):
-        assert not self.trips, "OsmRoute doesn't yet support merging trips"
+    def merge_trips(self, gtfs_route, osm_schedule):
+        unupdated_trips = self.trips.copy()
+
         for trip in gtfs_route.trips:
-            osm_trip = OsmTrip.fromGtfs(trip, osm_schedule)
-            self.add_trip(osm_trip)
+            osm_trip = self.get_trip_by_ref(trip.ref)
+            if osm_trip is None:
+                osm_trip = OsmTrip.fromGtfs(trip, osm_schedule)
+                self.add_trip(osm_trip)
+            else:
+                osm_trip.merge_gtfs(trip, osm_schedule)
+                unupdated_trips.remove(osm_trip)
+
+        # the idea is to have a one-to-one relation between GTFS trips and OSM
+        # trips. If some trips were updated but not some others, it might mean
+        # that they were removed in the GTFS dataset for instance. Anyway, it
+        # requires manual intervention
+        if unupdated_trips:
+            refs = ",".join([t.ref for t in unupdated_trips])
+            raise OsmTripsNotUpdatedError(f"Trips '{refs}' not updated")
         
         self.add_extra_tags(gtfs_route)
 
