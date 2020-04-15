@@ -242,9 +242,9 @@ class OsmRoute(OsmElement):
         self.trips.append(trip)
         trip.set_route(self)
 
-    def get_trip_by_name(self, name):
+    def get_trip_by_ref(self, ref):
         for trip in self.trips:
-            if trip.ref == name:
+            if trip.ref == ref:
                 return trip
 
 class Schedule(object):
