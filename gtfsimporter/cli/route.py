@@ -30,10 +30,16 @@ class RouteParser(object):
         conflator = RouteConflator(gtfs, osm)
 
         for route in gtfs.routes:
-            osm_route = cls.get_osm_route(conflator, route)
-            if not osm_route:
-                missing_routes.append(route)
+            try:
+                osm_route = cls.get_osm_route(conflator, route)
+                if not osm_route:
+                    missing_routes.append(route)
+            except Exception as e:
+                print(f"Error when looking for OSM route {route.ref}: {e}")
+                continue
 
+        for route in missing_routes:
+            print(f"Exporting route '{route.ref}'")
         cls.__export_gtfs_routes(missing_routes, osm, args.output_file)
 
 
@@ -58,10 +64,9 @@ class RouteParser(object):
     def get_osm_route(cls, conflator, gtfs_route):
             matches = conflator.find_matching_osm_routes(gtfs_route)
 
-            if len(matches) > 1:
-                print(f"Too many matching routes with same ref, network, operator "
-                      f"for ref '{gtfs_route.ref}'")
-                return None
+            assert len(matches) <= 1, \
+                f"Too many matching routes with same ref, network, operator " \
+                f"in OSM for ref '{gtfs_route.ref}'"
 
             # we've found an exact match, nothing to do
             if len(matches) == 1:
@@ -115,9 +120,13 @@ class RouteParser(object):
 
             refs.remove(gtfs_route.ref)
 
-            osm_route = cls.get_osm_route(conflator, gtfs_route)
-            if not osm_route:
-                print(f"Route with '{gtfs_route.ref}' not found in OSM")
+            try:
+                osm_route = cls.get_osm_route(conflator, gtfs_route)
+                if not osm_route:
+                    print(f"Route with '{gtfs_route.ref}' not found in OSM")
+                    continue
+            except Exception as e:
+                print(f"Error when looking for OSM route {gtfs_route.ref}: {e}")
                 continue
 
             try:
