@@ -167,10 +167,13 @@ class OsmTrip(OsmElement):
     def __len__(self):
         return len(self.stops)
 
+    def set_tag_error(self, name, value):
+        raise AttributeError(f"object is read-only because import failed: {self.error}")
+
     def set_import_error(self, error):
         self.error = error
         self.modified = False
-        self.set_tag = None
+        self.set_tag = self.set_tag_error
 
     def import_failed(self):
         return self.error is not None
