@@ -46,6 +46,60 @@ class RouteParser(object):
         with open(out_file, 'w', encoding="utf-8") as output_file:
             doc.write(output_file)
 
+    @classmethod
+    def get_routes_by_ref(cls, gtfs_schedule, osm_schedule, ref):
+        g_route = None
+        o_route = None
+
+        # For the GTFS route, simply check the ref
+        for route in gtfs_schedule.routes:
+            if route.ref == ref:
+                g_route = route
+                break
+
+        if not g_route:
+            return None, None
+
+        # for OSM, check ref, operator, and network as
+        # several routes may have the same ref in the same area
+        for route in osm_schedule.routes:
+            if (route.ref == ref and
+                route.operator == g_route.operator and
+                route.network == g_route.network):
+                o_route = route
+                break
+
+        return g_route, o_route
+
+    @classmethod
+    def update_routes(cls, args):
+        gtfs, osm = SchedulesLoader.load_from_args(args)
+
+        modified_routes = []
+        refs = args.route_ref.split(",")
+        for ref in refs:
+            g_route, o_route = cls.get_routes_by_ref(gtfs, osm, ref)
+            if not g_route or not o_route:
+                print(f"Route '{ref}' could not be found")
+                continue
+
+            try:
+                o_route.merge_gtfs(g_route, osm)
+            except Exception as e:
+                print(f"Route '{ref}' update failed: {e}")
+                continue
+
+            # check if the route or trips were modified
+            if o_route.modified or any([t.modified for t in o_route.trips]):
+                modified_routes.append(o_route)
+                print(f"Route '{ref}' updated")
+            else:
+                print(f"Route '{ref} was not modified', skipping update")
+
+        doc = JosmDocument()
+        doc.export_routes(modified_routes)
+        with open(args.output_file, 'w', encoding="utf-8") as output_file:
+            doc.write(output_file)
 
     @classmethod
     def setup_arguments(cls, parser, subparsers):
@@ -83,3 +137,20 @@ class RouteParser(object):
 
         SchedulesLoader.setup_arguments(route_missing_parser, subparsers)
         route_missing_parser.set_defaults(func=RouteParser.generate_missing_routes)
+
+        # COMMAND: route update
+        route_update_parser = route_subparsers.add_parser(
+            "update",
+            help="Update existing OSM route")
+        route_update_parser.add_argument(
+            "--route-ref",
+            required=True,
+            help="List of route references to update, comma-separated "
+                 ", eg. --route-ref 1234,5789")
+        route_update_parser.add_argument(
+            "--output-file",
+            required=True,
+            help="File to store generated routes")
+
+        SchedulesLoader.setup_arguments(route_update_parser, subparsers)
+        route_update_parser.set_defaults(func=RouteParser.update_routes)
