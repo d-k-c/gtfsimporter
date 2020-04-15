@@ -26,8 +26,13 @@ class RouteParser(object):
     def generate_missing_routes(cls, args):
         gtfs, osm = SchedulesLoader.load_from_args(args)
 
+        missing_routes = []
         conflator = RouteConflator(gtfs, osm)
-        missing_routes = conflator.only_in_gtfs()
+
+        for route in gtfs.routes:
+            osm_route = cls.get_osm_route(conflator, route)
+            if not osm_route:
+                missing_routes.append(route)
 
         cls.__export_gtfs_routes(missing_routes, osm, args.output_file)
 
