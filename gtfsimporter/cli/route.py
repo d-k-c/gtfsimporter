@@ -108,24 +108,33 @@ class RouteParser(object):
 
         modified_routes = []
         refs = args.route_ref.split(",")
-        for ref in refs:
-            g_route, o_route = conflator.get_routes_by_ref(ref)
-            if not g_route or not o_route:
-                print(f"Route '{ref}' could not be found")
+
+        for gtfs_route in gtfs.routes:
+            if gtfs_route.ref not in refs:
+                continue
+
+            refs.remove(gtfs_route.ref)
+
+            osm_route = cls.get_osm_route(conflator, gtfs_route)
+            if not osm_route:
+                print(f"Route with '{gtfs_route.ref}' not found in OSM")
                 continue
 
             try:
-                o_route.merge_gtfs(g_route, osm)
+                osm_route.merge_gtfs(gtfs_route, osm)
             except Exception as e:
-                print(f"Route '{ref}' update failed: {e}")
+                print(f"Route '{gtfs_route.ref}' update failed: {e}")
                 continue
 
             # check if the route or trips were modified
-            if o_route.modified or any([t.modified for t in o_route.trips]):
-                modified_routes.append(o_route)
-                print(f"Route '{ref}' updated")
+            if osm_route.modified or any([t.modified for t in osm_route.trips]):
+                modified_routes.append(osm_route)
+                print(f"Route '{gtfs_route.ref}' updated")
             else:
-                print(f"Route '{ref} was not modified', skipping update")
+                print(f"Route '{gtfs_route.ref} was not modified', skipping update")
+
+        for ref in refs:
+            print(f"Route '{ref}' does not match any route in GTFS dataset")
 
         # avoid creating an empty file
         if not modified_routes:
