@@ -21,7 +21,7 @@ class CacheParser(object):
     @classmethod
     def generate_osm_xml(cls, args):
 
-        gtfs_schedule = GtfsLoader.load_from_args(args)
+        gtfs_schedule = GtfsLoader.load_only_stops(args)
 
         bbox = gtfs_schedule.get_bounding_box(1000)
         loader = OverpassImporter(bbox)

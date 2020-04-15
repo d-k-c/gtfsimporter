@@ -35,7 +35,7 @@ class StopParser(object):
 
     @classmethod
     def generate_missing_stops(cls, args):
-        gtfs, osm = SchedulesLoader.load_from_args(args)
+        gtfs, osm = SchedulesLoader.load_only_stops(args)
 
         conflator = StopConflator(gtfs.stops, osm.stops)
         missing_stops = conflator.only_in_gtfs()
