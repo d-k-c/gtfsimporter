@@ -23,6 +23,30 @@ class RouteConflator(object):
         return route_details.values()
 
 
+    def get_routes_by_ref(self, ref, match_network=True, match_operator=True):
+
+        gtfs_route = osm_route = None
+
+        for route in self.gtfs.routes:
+            if route.ref == ref:
+                gtfs_route = route
+                break
+        else:
+            return gtfs_route, osm_route
+
+        for route in self.osm.routes:
+            if route.ref != ref:
+                continue
+            if match_network and route.network != gtfs_route.network:
+                continue
+            if match_operator and route.operator != gtfs_route.operator:
+                continue
+
+            osm_route = route
+
+        return gtfs_route, osm_route
+
+
     def get_route_in_schedule(self, schedule, route_code):
         # FIXME: should be a schedule.get_route_by_code() function
         for route in schedule.routes:
