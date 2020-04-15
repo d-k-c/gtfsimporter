@@ -9,7 +9,7 @@ class StopParser(object):
 
     @classmethod
     def generate_stops(cls, args):
-        gtfs_schedule = GtfsLoader.load_from_args(args)
+        gtfs_schedule = GtfsLoader.load_only_stops(args)
 
         if args.stop_ref is None:
             osm_stops = [OsmStop.fromGtfs(s) for s in gtfs_schedule.stops]
