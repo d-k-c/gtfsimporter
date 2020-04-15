@@ -6,21 +6,7 @@
 Public Transport Agencies provide data about bus routes, trips, and stops. Most
 of the bus routes are incomplete in Open Street Map, this script can help fill
 the gaps by exporting missing stops and bus routes in JOSM compatible format.
-In JOSM, stops and routes can be reviewed manually before being uploaded.
-
-## What does it do?
-
-It takes a route number as parameter. With that, it generates a list of all the
-bus trips that are identified by this route number in the GTFS dataset, and
-generate the route in a format that can be loaded by JOSM. You are strongly
-advised to manually validate the generated output before uploading it to
-OpenStreetMap.
-
-Usually, for a given route number you'll get two trips, one for each direction.
-For some bus routes, you'll get more trips. Reasons could be that some buses
-only serve a part of the line, or that some stops are different depending on the
-time of the day. Currently, only the longest trip of each route is generated in
-the output file.
+In JOSM, stops and routes should be reviewed manually before being uploaded.
 
 ## Set up
 
@@ -37,13 +23,13 @@ gtfsimporter.main --help` to get a list of available commands.
 
 ## Limitations
 
+- When parsing GTFS data, only the longest trip for each direction is kept.
+  Sometimes, shorter or different trips exist because some buses only run on a
+  part of the line, or stop at different places depending on the time of day.
 - When creating bus routes, this program expects bus stops to be already present
-  in OpenStreetMap. If stops are missing, route creation will fail. If you use
-  export-routes, output file will contain only routes for which stops were found
-  in OSM.
-- Route relations create this program don't contain ways, but one can use the
-  --with-shapes switch to create a way that matches the shape of the route. This
-  shape can be used to add ways to the route relation.
+  in OpenStreetMap. This is purely to limit the size of each change, to make
+  review easier.
+- Route relations created by this program don't contain ways.
 
 ## Helper Makefile
 
@@ -55,10 +41,9 @@ it, and wrap gtfsimporter commands for convenience. For instance, the `STM
 `make stm-export-routes` and it will do everything for you. Use `make help` for
 more info.
 
-Note that it generates a cache file to limit queries against the Overpass API.
-This cache contains information about bus stops, so if bus stops change in OSM,
-you need to delete it manually (for now) to force its renewal. For instance to
-clear cache for the STM: `make stm-clean-stops-cache`
+The first run can be quite long because GTFS data are fully parsed to generate
+stops and routes lists. Cache files are then generated to make following
+invocations faster.
 
 ## TL;DR
 
@@ -74,3 +59,11 @@ I want to see the route for line 10 of the STM network, what should I do?
 Actually, I want all routes
 - `make stm-export-routes # result is in work/stm/routes.osm`
 
+Sorry, I meant only *missing* routes
+- `make stm-export-routes-missing`
+
+Route 10 has changed, what can I do?
+- `make stm-update-route route=10`
+
+I want to update my local version of OSM data
+- `make stm-clean-cache-osm # on following runs, cache will be re-generated`
