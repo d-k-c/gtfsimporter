@@ -161,7 +161,7 @@ $(1)-clean-cache-gtfs:
 	rm $$($(2)_TARGET_PICKLE_GTFS)
 
 $(1)-cleanall:
-	echo rm -rf $$($(2)_WORK_DIR)
+	rm -rf $$($(2)_WORK_DIR)
 
 
 $$($(2)_TARGET_DOWNLOAD):	PROVIDER=$(2)
