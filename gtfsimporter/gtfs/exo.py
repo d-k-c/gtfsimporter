@@ -10,7 +10,7 @@ class ExoBaseAgency(object):
         return ExoStop(row)
 
     def make_route(self, row):
-        return ExoRoute(row)
+        return ExoRoute(row, self.name, "EXO")
 
     def make_trip(self, row):
         return ExoTrip(row)
@@ -76,25 +76,28 @@ class ExoStop(GtfsStop):
         lat = row["stop_lat"]
         lon = row["stop_lon"]
 
-        super().__init__(name, ref, lon, lat, stop_id, None, None, None)
+        super().__init__(stop_id, lat, lon, name, ref)
 
 
 class ExoRoute(GtfsRoute):
 
-    def __init__(self, row):
+    def __init__(self, row, network, operator):
         try:
             route_id = row["route_id"]
             route_code = row["route_short_name"]
             route_name = row["route_long_name"]
-            agency = row["agency_id"]
         except:
             print(row)
 
-        super().__init__(route_id, route_code, route_name, agency, agency)
+        super().__init__(route_id, route_code, route_name,
+                         network, operator)
 
+    @property
+    def name(self):
+        return self.get_name()
 
     def get_name(self):
-        return "Bus {} : {}".format(self.code, self.name)
+        return "Bus {} : {}".format(self.code, self._name)
 
 
 
@@ -107,8 +110,11 @@ class ExoTrip(GtfsTrip):
 
         shape_id = row["shape_id"]
 
-        super().__init__(trip_id, route_id, headsign, None, None, shape_id)
+        super().__init__(trip_id, route_id, headsign, shape_id=shape_id)
 
+    @property
+    def name(self):
+        return self.get_name()
 
     def get_name(self, lang='fr'):
         return "Bus {} : {}".format(
