@@ -26,7 +26,7 @@ $(OUTPUT)/%/osm.xml:
 	@echo "Generating OSM XML cache with latest OSM data"
 	$(GTFS_IMPORTER) \
 		cache query-osm \
-			--gtfs-pickle $($(PROVIDER)_GTFS_PICKLE_FILE) \
+			--gtfs-datadir $($(PROVIDER)_UNPACK_DIR) \
 			--output-file $@
 
 $(OUTPUT)/%/osm.pickle:
@@ -45,8 +45,8 @@ $(OUTPUT)/%/stops.osm:
 $(OUTPUT)/%/missing_stops.osm:
 	$(GTFS_IMPORTER) \
 		stops export-missing \
-			--gtfs-pickle $($(PROVIDER)_GTFS_PICKLE_FILE) \
-			--osm-pickle $($(PROVIDER)_OSM_PICKLE_FILE) \
+			--gtfs-datadir $($(PROVIDER)_UNPACK_DIR) \
+			--osm-xml $($(PROVIDER)_OSM_XML_FILE) \
 			--output-file $@
 
 $(OUTPUT)/%/routes.osm:
@@ -137,7 +137,7 @@ $(1)-export-stops:		$$($(2)_TARGET_STOPS)
 $$($(2)_TARGET_STOPS):		$$($(2)_TARGET_EXTRACT)
 
 $(1)-export-stops-missing:	$$($(2)_TARGET_STOPS_MISSING)
-$$($(2)_TARGET_STOPS_MISSING):	$$($(2)_TARGET_PICKLE_GTFS) $$($(2)_TARGET_QUERY_OSM)
+$$($(2)_TARGET_STOPS_MISSING):	$$($(2)_TARGET_EXTRACT) $$($(2)_TARGET_QUERY_OSM)
 
 $(1)-export-route:		$$($(2)_TARGET_ROUTE)
 $$($(2)_TARGET_ROUTE):		$$($(2)_TARGET_PICKLE_GTFS) $$($(2)_TARGET_PICKLE_OSM)
