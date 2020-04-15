@@ -7,11 +7,21 @@ class RouteConflator(object):
         self.gtfs = gtfs_schedule
         self.osm = osm_schedule
 
-    def only_in_gtfs(self):
-        osm_refs = [route.ref for route in self.osm.routes]
 
-        return list(filter(lambda gtfs_route: gtfs_route.ref not in osm_refs,
-                           self.gtfs.routes))
+    def only_in_gtfs(self):
+        """
+        Return routes that exist only in the GTFS schedule. Route match is
+        based on "ref", "operator", and "network" tags.
+        """
+        route_details = {}
+        for route in self.gtfs.routes:
+            route_details[(route.ref, route.network, route.operator)] = route
+
+        for route in self.osm.routes:
+            route_details.pop((route.ref, route.network, route.operator), None)
+
+        return route_details.values()
+
 
     def get_route_in_schedule(self, schedule, route_code):
         # FIXME: should be a schedule.get_route_by_code() function
