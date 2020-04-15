@@ -42,7 +42,7 @@ $(OUTPUT)/%/stops.osm:
 			--gtfs-datadir $($(PROVIDER)_UNPACK_DIR) \
 			--output-file $@
 
-$(OUTPUT)/%/missing_stops:
+$(OUTPUT)/%/missing_stops.osm:
 	$(GTFS_IMPORTER) \
 		stops export-missing \
 			--gtfs-pickle $($(PROVIDER)_GTFS_PICKLE_FILE) \
