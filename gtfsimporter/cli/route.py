@@ -1,4 +1,6 @@
 
+import sys
+
 from .loader import GtfsLoader, SchedulesLoader
 
 from ..conflation.routes import RouteConflator
@@ -45,6 +47,52 @@ class RouteParser(object):
         doc.export_routes(osm_routes)
         with open(out_file, 'w', encoding="utf-8") as output_file:
             doc.write(output_file)
+
+
+    @classmethod
+    def get_osm_route(cls, conflator, gtfs_route):
+            matches = conflator.find_matching_osm_routes(gtfs_route)
+
+            if len(matches) > 1:
+                print(f"Too many matching routes with same ref, network, operator "
+                      f"for ref '{gtfs_route.ref}'")
+                return None
+
+            # we've found an exact match, nothing to do
+            if len(matches) == 1:
+                return matches[0]
+
+            matches = conflator.find_matching_osm_routes(gtfs_route, False, False)
+            if matches:
+                return cls.prompt_disambiguate_routes(gtfs_route.name, matches)
+            else:
+                return None
+
+
+    @classmethod
+    def prompt_disambiguate_routes(cls, route_name, osm_routes):
+        print("")
+        print(f"Several matching routes have been found that could match '{route_name}': ")
+
+        while True:
+            for i, r in enumerate(osm_routes, start=1):
+                print(f"{i}) ref: {r.ref}, name: {r.name}, "
+                      f"operator: {r.operator}, network: {r.network}")
+            i += 1
+            print(f"{i}) None of the above")
+
+            try:
+                index = int(input("Enter route number: "))
+                index -= 1
+                if index == len(osm_routes):
+                    return None
+                else:
+                    route = osm_routes[index - 1]
+                    return route
+            except (KeyboardInterrupt, EOFError):
+                sys.exit(0)
+            except:
+                pass
 
 
     @classmethod
