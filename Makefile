@@ -77,6 +77,17 @@ endif
 			--route-ref $(route) \
 			--output-file $@
 
+update_route_%.osm:
+ifeq ($(route),)
+	$(error "Unspecified route, expecting 'route=<id>' as parameter")
+endif
+	$(GTFS_IMPORTER) \
+		routes update \
+			--gtfs-pickle $($(PROVIDER)_GTFS_PICKLE_FILE) \
+			--osm-pickle $($(PROVIDER)_OSM_PICKLE_FILE) \
+			--route-ref $(route) \
+			--output-file $@
+
 
 define gtfs-providers
 
@@ -96,6 +107,7 @@ $(2)_MISSING_ROUTES_FILE = $$($(2)_WORK_DIR)/missing_routes.osm
 
 # target for a single route
 $(2)_TARGET_ROUTE    = $$($(2)_WORK_DIR)/route_$(route).osm
+$(2)_TARGET_ROUTE_UPDATE = $$($(2)_WORK_DIR)/update_route_$(route).osm
 
 $(2)_TARGET_DOWNLOAD	= $$($(2)_WORK_DIR)/.stamp_downloaded
 $(2)_TARGET_EXTRACT	= $$($(2)_WORK_DIR)/.stamp_extracted
@@ -130,6 +142,9 @@ $$($(2)_TARGET_STOPS_MISSING):	$$($(2)_TARGET_PICKLE_GTFS) $$($(2)_TARGET_QUERY_
 $(1)-export-route:		$$($(2)_TARGET_ROUTE)
 $$($(2)_TARGET_ROUTE):		$$($(2)_TARGET_PICKLE_GTFS) $$($(2)_TARGET_PICKLE_OSM)
 
+$(1)-update-route:		$$($(2)_TARGET_ROUTE_UPDATE)
+$$($(2)_TARGET_ROUTE_UPDATE):	$$($(2)_TARGET_PICKLE_GTFS) $$($(2)_TARGET_PICKLE_OSM)
+
 $(1)-export-routes:		$$($(2)_TARGET_ROUTES)
 $$($(2)_TARGET_ROUTES):		$$($(2)_TARGET_PICKLE_GTFS) $$($(2)_TARGET_PICKLE_OSM)
 
@@ -150,6 +165,7 @@ $$($(2)_TARGET_PICKLE_OSM):	PROVIDER=$(2)
 $$($(2)_TARGET_STOPS):		PROVIDER=$(2)
 $$($(2)_TARGET_STOPS_MISSING):	PROVIDER=$(2)
 $$($(2)_TARGET_ROUTE):		PROVIDER=$(2)
+$$($(2)_TARGET_ROUTE_UPDATE):	PROVIDER=$(2)
 $$($(2)_TARGET_ROUTES):		PROVIDER=$(2)
 $$($(2)_TARGET_ROUTES_MISSING):	PROVIDER=$(2)
 
@@ -182,6 +198,7 @@ help:
 	@echo "make <provider>-export-route route=<id>	export only route with specified id"
 	@echo "make <provider>-export-routes		export all GTFS routes"
 	@echo "make <provider>-export-routes-missing	export routes missing in OSM"
+	@echo "make <provider>-update-route route=<id>	update route with specified id"
 	@echo ""
 	@echo ""
 	@echo "Supported providers:"
