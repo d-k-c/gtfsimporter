@@ -153,8 +153,15 @@ $$($(2)_TARGET_ROUTES_MISSING):	$$($(2)_TARGET_PICKLE_GTFS) $$($(2)_TARGET_PICKL
 
 $(1)-cache:			$$($(2)_TARGET_PICKLE_GTFS) $$($(2)_TARGET_PICKLE_OSM)
 
+$(1)-clean-cache-osm:
+	rm $$($(2)_TARGET_QUERY_OSM)
+	rm $$($(2)_TARGET_PICKLE_OSM)
+
+$(1)-clean-cache-gtfs:
+	rm $$($(2)_TARGET_PICKLE_GTFS)
+
 $(1)-cleanall:
-	@echo rm -rf $$($(2)_WORK_DIR)
+	echo rm -rf $$($(2)_WORK_DIR)
 
 
 $$($(2)_TARGET_DOWNLOAD):	PROVIDER=$(2)
@@ -199,6 +206,13 @@ help:
 	@echo "make <provider>-export-routes		export all GTFS routes"
 	@echo "make <provider>-export-routes-missing	export routes missing in OSM"
 	@echo "make <provider>-update-route route=<id>	update route with specified id"
+	@echo ""
+	@echo "Clean section:"
+	@echo "    Cleaning up cache is required if upstream (be it OSM or GTFS) data"
+	@echo "    has changed. That will force this tool to fetch up-to-date data"
+	@echo "make <provider>-clean-cache-osm          Remove OSM-related cache files"
+	@echo "make <provider>-clean-cache-gtfs         Remove GTFS cache file"
+	@echo "make <provider>-cleanall                 Remove work directory"
 	@echo ""
 	@echo ""
 	@echo "Supported providers:"
