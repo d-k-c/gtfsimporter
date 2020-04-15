@@ -46,39 +46,17 @@ class RouteParser(object):
         with open(out_file, 'w', encoding="utf-8") as output_file:
             doc.write(output_file)
 
-    @classmethod
-    def get_routes_by_ref(cls, gtfs_schedule, osm_schedule, ref):
-        g_route = None
-        o_route = None
-
-        # For the GTFS route, simply check the ref
-        for route in gtfs_schedule.routes:
-            if route.ref == ref:
-                g_route = route
-                break
-
-        if not g_route:
-            return None, None
-
-        # for OSM, check ref, operator, and network as
-        # several routes may have the same ref in the same area
-        for route in osm_schedule.routes:
-            if (route.ref == ref and
-                route.operator == g_route.operator and
-                route.network == g_route.network):
-                o_route = route
-                break
-
-        return g_route, o_route
 
     @classmethod
     def update_routes(cls, args):
         gtfs, osm = SchedulesLoader.load_from_args(args)
 
+        conflator = RouteConflator(gtfs, osm)
+
         modified_routes = []
         refs = args.route_ref.split(",")
         for ref in refs:
-            g_route, o_route = cls.get_routes_by_ref(gtfs, osm, ref)
+            g_route, o_route = conflator.get_routes_by_ref(ref)
             if not g_route or not o_route:
                 print(f"Route '{ref}' could not be found")
                 continue
