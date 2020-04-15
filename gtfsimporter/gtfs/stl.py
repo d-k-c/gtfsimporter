@@ -38,5 +38,5 @@ class StlStop(GtfsStop):
         # some entries have multiple consecutive whitespaces
         name = name.replace("  ", " ")
 
-        super().__init__(name, ref, lon, lat, stop_id, None, None, None)
+        super().__init__(stop_id, lat, lon, name, ref)
 
