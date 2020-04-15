@@ -24,6 +24,14 @@ class DatadirGtfsLoader(object):
         return schedule
 
     @classmethod
+    def load_only_stops(cls, datadir):
+        loader = GTFSImporter(datadir)
+
+        schedule = loader.load_stops()
+
+        return schedule
+
+    @classmethod
     def load_from_args(cls, args):
         if args.gtfs_datadir:
             return cls.load_gtfs_datadir(args.gtfs_datadir)
@@ -69,6 +77,15 @@ class GtfsLoader(object):
             return PickleGtfsLoader.load_gtfs_pickle(args.gtfs_pickle)
         elif args.gtfs_datadir:
             return DatadirGtfsLoader.load_gtfs_datadir(args.gtfs_datadir)
+        else:
+            raise AttributeError("--gtfs-datadir or --gtfs-pickle must be set")
+
+    @classmethod
+    def load_only_stops(cls, args):
+        if args.gtfs_pickle:
+            return PickleGtfsLoader.load_gtfs_pickle(args.gtfs_pickle)
+        elif args.gtfs_datadir:
+            return DatadirGtfsLoader.load_only_stops(args.gtfs_datadir)
         else:
             raise AttributeError("--gtfs-datadir or --gtfs-pickle must be set")
 
@@ -152,6 +169,13 @@ class SchedulesLoader(object):
     @classmethod
     def load_from_args(cls, args):
         gtfs = GtfsLoader.load_from_args(args)
+        osm = OsmLoader.load_from_args(args)
+
+        return gtfs, osm
+
+    @classmethod
+    def load_only_stops(cls, args):
+        gtfs = GtfsLoader.load_only_stops(args)
         osm = OsmLoader.load_from_args(args)
 
         return gtfs, osm
