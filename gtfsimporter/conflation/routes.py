@@ -47,6 +47,21 @@ class RouteConflator(object):
         return gtfs_route, osm_route
 
 
+    def find_matching_osm_routes(self, gtfs_route,
+                                 match_network=True, match_operator=True):
+        matches = []
+        for route in self.osm.routes:
+            if route.ref != gtfs_route.ref:
+                continue
+            if match_network and route.network != gtfs_route.network:
+                continue
+            if match_operator and route.operator != gtfs_route.operator:
+                continue
+
+            matches.append(route)
+
+        return matches
+
     def get_route_in_schedule(self, schedule, route_code):
         # FIXME: should be a schedule.get_route_by_code() function
         for route in schedule.routes:
