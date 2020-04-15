@@ -96,6 +96,10 @@ class RouteParser(object):
             else:
                 print(f"Route '{ref} was not modified', skipping update")
 
+        # avoid creating an empty file
+        if not modified_routes:
+            return
+
         doc = JosmDocument()
         doc.export_routes(modified_routes)
         with open(args.output_file, 'w', encoding="utf-8") as output_file:
