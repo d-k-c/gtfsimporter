@@ -95,7 +95,7 @@ class OverpassImporter():
         for node in response.nodes:
             id, lat, lon = node.id, node.lat, node.lon
 
-            stop = OsmStop(id, lon, lat, node.tags, node.attributes)
+            stop = OsmStop(id, lat, lon, node.tags, node.attributes)
             schedule.add_stop(stop)
 
             #self.check_tag(schedule, stop, "highway", "bus_stop")
