@@ -2,7 +2,9 @@
 
 from pprint import pprint
 
-from .elements import OsmRoute, Schedule, OsmStop, OsmTrip
+from .elements import OsmRoute, OsmStop, OsmTrip
+
+from ..common_elements import Schedule
 from ..validator.issue import *
 
 

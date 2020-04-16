@@ -142,9 +142,3 @@ class Schedule(object):
 
     def add_stop_time(self, trip, stop_time):
         trip.add_stop_time(stop_time)
-
-
-if __name__ == "__main__":
-
-    stop = Stop.fromGTFS(1234, 0.1, 0.2, "toto", "5678")
-    print(stop.name)

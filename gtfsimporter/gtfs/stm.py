@@ -1,8 +1,8 @@
 
 
-from .elements import GtfsRoute, Schedule, GtfsStop, GtfsStopTime, GtfsTrip
-
+from .elements import GtfsRoute, GtfsStop, GtfsStopTime, GtfsTrip
 from .exceptions import SkipEntryError
+
 
 class StmAgency(object):
 

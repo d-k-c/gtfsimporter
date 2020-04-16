@@ -1,7 +1,6 @@
 
 
-from ..gtfs.elements import GtfsRoute, GtfsStop, GtfsStopTime, GtfsTrip
-
+from .elements import GtfsRoute, GtfsStop, GtfsStopTime, GtfsTrip
 from .exceptions import SkipEntryError
 
 class ExoBaseAgency(object):

@@ -4,7 +4,7 @@ import csv
 
 from . import agencies
 from .exceptions import SkipEntryError
-from ..elements import Schedule
+from ..common_elements import Schedule
 
 class GTFSImporter():
 

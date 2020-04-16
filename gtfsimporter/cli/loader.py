@@ -2,7 +2,7 @@
 import argparse
 import pickle
 
-from ..elements import Schedule
+from ..common_elements import Schedule
 
 from ..gtfs.importer import GTFSImporter
 from ..osm.overpass import OverpassImporter
