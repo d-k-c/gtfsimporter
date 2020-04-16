@@ -99,7 +99,7 @@ class OsmStop(OsmNode):
 
     def __repr__(self):
         return "<Stop id={}, refs={}, name={}, coord=[{}, {}]>".format(
-                self.id, self.refs, self.name, self.lon, self.lat)
+                self.id, self.refs, self.name, self.lat, self.lon)
 
 
 class OsmTrip(OsmElement):
