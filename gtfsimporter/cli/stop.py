@@ -38,15 +38,32 @@ class StopParser(object):
         gtfs, osm = SchedulesLoader.load_only_stops(args)
 
         conflator = StopConflator(gtfs.stops, osm.stops)
-        missing_stops = conflator.only_in_gtfs()
+        missing_stops = conflator.stops_with_refs_only_in_gtfs()
 
-        osm_stops = []
+        missing_osm_stops = []
+        partial_ref_stops = {}
+
         for stop in missing_stops:
+            if len(stop.refs) > 1:
+                matching_stops = conflator.find_matching_osm_stops(stop)
+                if matching_stops:
+                    partial_ref_stops[stop] = matching_stops
+                    continue
+
             osm_stop = OsmStop.fromGtfs(stop)
-            osm_stops.append(osm_stop)
+            missing_osm_stops.append(osm_stop)
+
+        if partial_ref_stops:
+            print("Following GTFS stops have multiple refs and some exist in OSM. "
+                  "OSM stops must be updated manually:")
+        for g_stop, osm_stops in partial_ref_stops.items():
+            print(f"\tGTFS Stop: refs={g_stop.refs}, name={g_stop.name}")
+            print("\tOSM Stops:")
+            for osm_stop in osm_stops:
+                print(f"\t           refs={osm_stop.refs}, name={osm_stop.name}")
 
         doc = JosmDocument()
-        doc.export_stops(osm_stops)
+        doc.export_stops(missing_osm_stops)
         with open(args.output_file, 'w', encoding="utf-8") as output_file:
             doc.write(output_file)
 

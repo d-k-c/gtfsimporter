@@ -7,7 +7,7 @@ class StopConflator(object):
         self.gtfs_stops = gtfs_stops
         self.osm_stops  = osm_stops
 
-    def only_in_gtfs(self):
+    def stops_with_refs_only_in_gtfs(self):
         osm_refs = self.get_all_refs(self.osm_stops)
 
         missing_stops = []
@@ -17,6 +17,16 @@ class StopConflator(object):
                     missing_stops.append(gtfs_stop)
 
         return missing_stops
+
+    def find_matching_osm_stops(self, gtfs_stop):
+        stops = []
+
+        for o_stop in self.osm_stops:
+            for o_ref in o_stop.refs:
+                if o_ref in gtfs_stop.refs and o_stop not in stops:
+                    stops.append(o_stop)
+
+        return stops
 
     def get_all_refs(self, stop_list):
         refs = []
