@@ -54,8 +54,14 @@ class Schedule(object):
         by.
         """
         for s in self.stops:
-            if s.name == stop.name and \
-               s.lat == stop.lat and s.lon == stop.lon:
+            if s.lat == stop.lat and s.lon == stop.lon:
+                if s.name != stop.name:
+                    print("WARNING: These stops have the same coordinates "
+                          "but not the same name. Name of the first one will be used.")
+                    print(f"\tid={s.id}, refs={s.refs}, name={s.name}")
+                    print(f"\tid={stop.id}, refs={stop.refs}, name={stop.name}")
+                    print("")
+
                 return s
 
     def add_stop(self, stop, deduplicate=False):
@@ -67,7 +73,7 @@ class Schedule(object):
             self._stops_by_id[stop.id] = existing_stop
             if stop.ref not in existing_stop.refs:
                 existing_stop.add_ref(stop.ref)
-                print(existing_stop.refs)
+                #print(existing_stop.refs)
         else:
             self._stops.append(stop)
             self._stops_by_id[stop.id] = stop
