@@ -2,18 +2,6 @@
 import xml.etree.ElementTree as ET
 
 
-def IdFactory():
-    i = 0
-    while True:
-        i -= 1
-        yield i
-
-id_factory = IdFactory()
-
-def GetIdFactory():
-    return id_factory
-
-
 class OsmObject:
 
     # picked from Overpy, to revert these modifications on attributes
@@ -25,8 +13,6 @@ class OsmObject:
     }
 
     def __init__(self, id, tags=None, attrs=None):
-        if id is None:
-            id = next(GetIdFactory())
         self.osm_id = str(id)
         if tags is None:
             tags = {}

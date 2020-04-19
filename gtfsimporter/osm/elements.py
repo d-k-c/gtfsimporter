@@ -18,6 +18,19 @@ class RefMissingInOsmError(OsmError):
     def __str__(self):
         return f"Stop with ref='{self.ref}' missing in OSM"
 
+
+def IdFactory():
+    i = 0
+    while True:
+        i -= 1
+        yield i
+
+id_factory = IdFactory()
+
+def GetIdFactory():
+    return id_factory
+
+
 class SupportTagMetaclass(type):
 
     def __new__(cls, clsname, bases, attrs):
@@ -43,6 +56,8 @@ class SupportTagMetaclass(type):
 class OsmElement(object, metaclass=SupportTagMetaclass):
 
     def __init__(self, osm_id, tags, attributes):
+        if osm_id is None:
+            osm_id = next(GetIdFactory())
         self.id = osm_id
         if tags is None:
             tags = {}
