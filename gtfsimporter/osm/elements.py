@@ -10,6 +10,13 @@ class OsmError(Exception):
 class OsmTripsNotUpdatedError(OsmError):
     pass
 
+class RefMissingInOsmError(OsmError):
+
+    def __init__(self, ref):
+        self.ref = ref
+
+    def __str__(self):
+        return f"Stop with ref='{self.ref}' missing in OSM"
 
 class SupportTagMetaclass(type):
 
@@ -161,7 +168,8 @@ class OsmTrip(OsmElement):
 
         for ref in gtfs_stop_refs:
             new_stop = osm_schedule.get_stop_by_ref(ref)
-            assert new_stop is not None, f"Stop with ref {ref} missing in OSM dataset"
+            if not new_stop:
+                raise RefMissingInOsmError(ref)
 
             new_stops.append(new_stop)
 
