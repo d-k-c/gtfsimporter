@@ -4,6 +4,12 @@ from math import cos, pi
 
 from functools import partialmethod, partial
 
+class OsmError(Exception):
+    pass
+
+class OsmTripsNotUpdatedError(OsmError):
+    pass
+
 
 class SupportTagMetaclass(type):
 
@@ -201,10 +207,6 @@ class OsmTrip(OsmElement):
 
     def __repr__(self):
         return "<Trip id={}, name={}, {} stops>".format(self.id, self.ref, len(self.stops))
-
-
-class OsmTripsNotUpdatedError(Exception):
-    pass
 
 
 class OsmRoute(OsmElement):
