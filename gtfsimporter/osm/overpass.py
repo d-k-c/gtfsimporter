@@ -42,6 +42,9 @@ class OverpassImporter():
     out meta;
     """
 
+    VALID_STOP_ROLES = ["stop", "stop_entry_only", "stop_exit_only"]
+    VALID_PLATFORM_ROLES = ["platform", "platform_entry_only", "platform_exit_only"]
+
     def __init__(self, area):
         self.area = area
         self._stops_dict = {}
@@ -126,9 +129,9 @@ class OverpassImporter():
         stop_position = None
         for member in relation.members:
             if isinstance(member, overpy.RelationNode):
-                if member.role == "stop":
-                    stop_position = member.ref
-                elif member.role.startswith("platform"):
+                if member.role in self.VALID_STOP_ROLES:
+                    stop_position = (member.ref, member.role)
+                elif member.role in self.VALID_PLATFORM_ROLES:
                     stop = schedule.get_stop(member.ref, None)
 
                     if stop is None:

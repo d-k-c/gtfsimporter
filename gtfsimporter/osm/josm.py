@@ -131,8 +131,9 @@ class RouteRelation(Relation):
 
             stop_pos = trip.get_stop_position(osm_stop)
             if stop_pos:
-                stop_pos_member = StopRelationMember(stop_pos, "stop")
-                self.add_member(stop_member)
+                stop_pos_id, stop_pos_role = stop_pos
+                stop_pos_member = StopRelationMember(stop_pos_id, stop_pos_role)
+                self.add_member(stop_pos_member)
 
             stop_role = trip.get_stop_role(osm_stop)
 
