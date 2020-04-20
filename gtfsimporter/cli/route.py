@@ -225,6 +225,45 @@ class RouteParser(object):
             doc.write(output_file)
 
     @classmethod
+    def status_routes(cls, args):
+
+        results = []
+
+        def print_route_status(gtfs_route, status, details=None):
+            name = gtfs_route.name
+            if len(name) > 50:
+                output = name[:47] + "..."
+            else:
+                output = "{:<50}".format(name)
+
+            output = output + f" : [{status}]"
+            if details:
+                output = output + f" ({details})"
+
+            results.append(output)
+
+
+        gtfs, osm = SchedulesLoader.load_from_args(args)
+
+        conflator = RouteConflator(gtfs, osm)
+
+        for gtfs_route in gtfs.routes:
+            try:
+                osm_route = cls.get_osm_route(conflator, gtfs_route)
+                if not osm_route:
+                    print_route_status(gtfs_route, "MISSING")
+                    continue
+
+                cls.merge_gtfs_route(gtfs_route, osm_route, osm, gtfs)
+                modified = osm_route.modified or any([t.modified for t in osm_route.trips])
+                print_route_status(gtfs_route, "DIFFERENT" if modified else "IDENTICAL")
+            except Exception as e:
+                print_route_status(gtfs_route, "ERROR", e)
+                continue
+
+        print("\n".join(results))
+
+    @classmethod
     def setup_arguments(cls, parser, subparsers):
 
         route_parser = subparsers.add_parser(
@@ -286,3 +325,11 @@ class RouteParser(object):
 
         SchedulesLoader.setup_arguments(route_update_parser, subparsers)
         route_update_parser.set_defaults(func=RouteParser.update_routes)
+
+        # COMMAND: route status
+        route_status_parser = route_subparsers.add_parser(
+            "status",
+            help="Print report on routes' status")
+
+        SchedulesLoader.setup_arguments(route_status_parser, subparsers)
+        route_status_parser.set_defaults(func=RouteParser.status_routes)

@@ -163,6 +163,12 @@ $(1)-clean-cache-gtfs:
 $(1)-cleanall:
 	rm -rf $$($(2)_WORK_DIR)
 
+$(1)-route-status:		$$($(2)_TARGET_PICKLE_GTFS) $$($(2)_TARGET_PICKLE_OSM)
+	$(GTFS_IMPORTER) \
+		routes status \
+			--gtfs-pickle $$($(2)_TARGET_PICKLE_GTFS) \
+			--osm-pickle $$($(2)_TARGET_PICKLE_OSM)
+
 
 $$($(2)_TARGET_DOWNLOAD):	PROVIDER=$(2)
 $$($(2)_TARGET_EXTRACT):	PROVIDER=$(2)
@@ -206,6 +212,7 @@ help:
 	@echo "make <provider>-export-routes		export all GTFS routes"
 	@echo "make <provider>-export-routes-missing	export routes missing in OSM"
 	@echo "make <provider>-update-route route=<id>	update route with specified id"
+	@echo "make <provider>-route-status		print a report with routes' status"
 	@echo ""
 	@echo "Clean section:"
 	@echo "    Cleaning up cache is required if upstream (be it OSM or GTFS) data"
