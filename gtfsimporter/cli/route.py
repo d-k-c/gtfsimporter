@@ -4,7 +4,7 @@ import sys
 from .loader import GtfsLoader, SchedulesLoader
 
 from ..conflation.routes import RouteConflator
-from ..osm.elements import OsmRoute
+from ..osm.elements import OsmRoute, OsmStop, RefMissingInOsmError
 from ..osm.josm import JosmDocument
 
 class RouteParser(object):
@@ -42,6 +42,61 @@ class RouteParser(object):
             print(f"Exporting route '{route.ref}'")
         cls.__export_gtfs_routes(missing_routes, osm, args.output_file)
 
+    @classmethod
+    def create_stop_by_ref(cls, gtfs_schedule, ref):
+        gtfs_stop = gtfs_schedule.get_stop_by_ref(ref)
+        if not gtfs_stop:
+            raise AttributeError(f"GTFS Schedule doesn't have stop with ref='{ref}'")
+
+        if len(gtfs_stop.refs) != 1:
+            raise AttributeError("GTFS stop has too many refs: {gtfs_stop.refs}")
+
+        return OsmStop.fromGtfs(gtfs_stop)
+
+
+    @classmethod
+    def create_or_merge_gtfs_route(cls, gtfs_route, osm_schedule,
+                                   osm_route=None, gtfs_schedule=None):
+        """
+        Create or merge a GTFS route, looking for OSM stops in the given
+        osm_schedule.
+
+        If osm_route is None, a new route will be created.
+        If gtfs_schedule is None, route creation will fail if stops don't
+        already exist in OSM schedule. If it is not None, attempt to create
+        stop.
+        """
+
+        create_new_route = osm_route is None
+        new_stops = []
+
+        while True:
+            try:
+                if create_new_route:
+                    osm_route = OsmRoute.fromGtfs(gtfs_route, osm_schedule)
+                else:
+                    osm_route.merge_gtfs(gtfs_route, osm_schedule)
+
+                return osm_route, new_stops
+            except RefMissingInOsmError as e:
+                if not gtfs_schedule:
+                    raise e
+
+                new_osm_stop = cls.create_stop_by_ref(gtfs_schedule, e.ref)
+                osm_schedule.add_stop(new_osm_stop)
+                new_stops.append(new_osm_stop)
+
+    @classmethod
+    def create_gtfs_route(cls, gtfs_route, osm_schedule, gtfs_schedule=None):
+        return cls.create_or_merge_gtfs_route(
+                    gtfs_route, osm_schedule, None, gtfs_schedule)
+
+    @classmethod
+    def merge_gtfs_route(cls, gtfs_route, osm_route, osm_schedule, gtfs_schedule=None):
+        _, new_stops = cls.create_or_merge_gtfs_route(
+                    gtfs_route, osm_schedule, osm_route, gtfs_schedule)
+
+        return new_stops
 
     @classmethod
     def __export_gtfs_routes(cls, gtfs_routes, osm_schedule, out_file):
