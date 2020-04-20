@@ -19,7 +19,7 @@ class RouteParser(object):
             wanted_refs = args.route_ref.split(",")
             selected_routes = [r for r in gtfs.routes if r.ref in wanted_refs]
 
-        cls.__export_gtfs_routes(selected_routes, osm, args.output_file)
+        cls.__export_gtfs_routes(selected_routes, osm, None, args.output_file)
 
 
     @classmethod
@@ -40,7 +40,7 @@ class RouteParser(object):
 
         for route in missing_routes:
             print(f"Exporting route '{route.ref}'")
-        cls.__export_gtfs_routes(missing_routes, osm, args.output_file)
+        cls.__export_gtfs_routes(missing_routes, osm, None, args.output_file)
 
     @classmethod
     def create_stop_by_ref(cls, gtfs_schedule, ref):
@@ -99,17 +99,21 @@ class RouteParser(object):
         return new_stops
 
     @classmethod
-    def __export_gtfs_routes(cls, gtfs_routes, osm_schedule, out_file):
+    def __export_gtfs_routes(cls, gtfs_routes, osm_schedule, gtfs_schedule, out_file):
         osm_routes = []
+        new_osm_stops = []
 
         for route in gtfs_routes:
             try:
-                osm_route, _ = cls.create_gtfs_route(route, osm_schedule)
+                osm_route, route_stops = cls.create_gtfs_route(
+                        route, osm_schedule, gtfs_schedule)
                 osm_routes.append(osm_route)
+                new_osm_stops.extend(route_stops)
             except Exception as e:
                 print(f"Unable to generate route {route.ref}: {e}")
 
         doc = JosmDocument()
+        doc.export_stops(new_osm_stops)
         doc.export_routes(osm_routes)
         with open(out_file, 'w', encoding="utf-8") as output_file:
             doc.write(output_file)
