@@ -1,4 +1,5 @@
 
+import argparse
 import sys
 
 from .loader import GtfsLoader, SchedulesLoader
@@ -19,7 +20,9 @@ class RouteParser(object):
             wanted_refs = args.route_ref.split(",")
             selected_routes = [r for r in gtfs.routes if r.ref in wanted_refs]
 
-        cls.__export_gtfs_routes(selected_routes, osm, None, args.output_file)
+        gtfs_sched_arg = gtfs if args.create_missing_stops else None
+
+        cls.__export_gtfs_routes(selected_routes, osm, gtfs_sched_arg, args.output_file)
 
 
     @classmethod
@@ -40,7 +43,10 @@ class RouteParser(object):
 
         for route in missing_routes:
             print(f"Exporting route '{route.ref}'")
-        cls.__export_gtfs_routes(missing_routes, osm, None, args.output_file)
+
+        gtfs_sched_arg = gtfs if args.create_missing_stops else None
+
+        cls.__export_gtfs_routes(missing_routes, osm, gtfs_sched_arg, args.output_file)
 
     @classmethod
     def create_stop_by_ref(cls, gtfs_schedule, ref):
@@ -171,7 +177,10 @@ class RouteParser(object):
         conflator = RouteConflator(gtfs, osm)
 
         modified_routes = []
+        new_osm_stops = []
         refs = args.route_ref.split(",")
+
+        gtfs_sched_arg = gtfs if args.create_missing_stops else None
 
         for gtfs_route in gtfs.routes:
             if gtfs_route.ref not in refs:
@@ -189,7 +198,8 @@ class RouteParser(object):
                 continue
 
             try:
-                cls.merge_gtfs_route(gtfs_route, osm_route, osm)
+                route_stops = cls.merge_gtfs_route(gtfs_route, osm_route, osm, gtfs_sched_arg)
+                new_osm_stops.extend(route_stops)
             except Exception as e:
                 print(f"Route '{gtfs_route.ref}' update failed: {e}")
                 continue
@@ -209,6 +219,7 @@ class RouteParser(object):
             return
 
         doc = JosmDocument()
+        doc.export_stops(new_osm_stops)
         doc.export_routes(modified_routes)
         with open(args.output_file, 'w', encoding="utf-8") as output_file:
             doc.write(output_file)
@@ -222,9 +233,16 @@ class RouteParser(object):
 
         route_subparsers = route_parser.add_subparsers()
 
+        create_stop_parser = argparse.ArgumentParser(add_help=False)
+        create_stop_parser.add_argument(
+                '--create-missing-stops',
+                action='store_true',
+                help="create OSM stops if missing")
+
         # COMMAND: route export
         route_export_parser = route_subparsers.add_parser(
             "export",
+            parents=[create_stop_parser],
             help="Export routes from the GTFS dataset. Stops must already be in OSM")
         route_export_parser.add_argument(
             "--route-ref",
@@ -241,6 +259,7 @@ class RouteParser(object):
         # COMMAND: route export-missing
         route_missing_parser = route_subparsers.add_parser(
             "export-missing",
+            parents=[create_stop_parser],
             help="Export routes missing in OSM")
         route_missing_parser.add_argument(
             "--output-file",
@@ -253,6 +272,7 @@ class RouteParser(object):
         # COMMAND: route update
         route_update_parser = route_subparsers.add_parser(
             "update",
+            parents=[create_stop_parser],
             help="Update existing OSM route")
         route_update_parser.add_argument(
             "--route-ref",
