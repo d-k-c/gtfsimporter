@@ -104,7 +104,7 @@ class RouteParser(object):
 
         for route in gtfs_routes:
             try:
-                osm_route = OsmRoute.fromGtfs(route, osm_schedule)
+                osm_route, _ = cls.create_gtfs_route(route, osm_schedule)
                 osm_routes.append(osm_route)
             except Exception as e:
                 print(f"Unable to generate route {route.ref}: {e}")
@@ -185,7 +185,7 @@ class RouteParser(object):
                 continue
 
             try:
-                osm_route.merge_gtfs(gtfs_route, osm)
+                cls.merge_gtfs_route(gtfs_route, osm_route, osm)
             except Exception as e:
                 print(f"Route '{gtfs_route.ref}' update failed: {e}")
                 continue
